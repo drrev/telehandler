@@ -68,11 +68,14 @@ stateDiagram-v2
     RUNNING --> FAILED
     FAILED --> [*]
     RUNNING --> COMPLETED
+    RUNNING --> STOPPED
+    STOPPED --> [*]
     COMPLETED --> [*]
 ```
 
 - `RUNNING`: The underlying Linux process has been started, but has not exited.
 - `FAILED`: The Linux process either failed to start or exited with a non-zero code.
+- `STOPPED`: The job was stopped by a user before completing execution.
 - `COMPLETED`: The Linux process started and exited successfully.
 
 The Telehandler Job lifecycle is minimal due to the simplistic and synchronous nature of this system. Each Job is started synchronously in the `StartJob` call, so there is no need for a `PENDING` state or a more complicated substate design. There are no retries; jobs are all one-shot and run to completion--unless the job is interrupted by a call to `StopJob`.
