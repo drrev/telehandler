@@ -14,7 +14,7 @@ option go_package = "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/
 // The Foreman service manages all jobs within the system.
 // This service is used to start, stop, query status, and get the output of a job.
 service Foreman {
-  // Starts and starts a job under the given parent resource.
+  // Starts a job under the given parent resource.
   //
   // If the operation failed, the following well-defined gRPC status codes are returned:
   //   - PERMISSION_DENIED: The requesting user does not have permission to start a new job.
