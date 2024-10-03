@@ -32,15 +32,11 @@ service Foreman {
 
 // A request to start a new Linux process.
 message StartJobRequest {
-  // Required. The ID of the user starting the process.
-  //
-  // Example: tester
-  string user_id = 1;
   // Required. The Linux command to run on the target system.
-  string command = 2;
+  string command = 1;
 
   // Optional. Arguments to pass to the command.
-  repeated string args = 3;
+  repeated string args = 2;
 }
 
 // A request to stop a Job.
@@ -49,11 +45,6 @@ message StopJobRequest {
   //
   // Example: 2259116c-578e-413c-93bd-d6855dfcb941
   string id = 1;
-
-  // Required. The requester's user ID.
-  //
-  // Example: tester
-  string user_id = 2;
 }
 
 // A request to resolve the latest status of the job,
@@ -63,11 +54,6 @@ message GetJobStatusRequest {
   //
   // Example: 2259116c-578e-413c-93bd-d6855dfcb941
   string id = 1;
-
-  // Required. The requester's user ID.
-  //
-  // Example: tester
-  string user_id = 2;
 }
 
 // A request to watch streaming output from a target job.
@@ -76,10 +62,6 @@ message WatchJobOutputRequest {
   //
   // Example: 2259116c-578e-413c-93bd-d6855dfcb941
   string id = 1;
-  // Required. The requester's user ID.
-  //
-  // Example: tester
-  string user_id = 2;
 }
 
 // A JobOutput reprents a single line of output from a given job.

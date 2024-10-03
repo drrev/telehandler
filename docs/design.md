@@ -181,7 +181,7 @@ Adapting this prototype to a production environment would require minimal uplift
 
 #### Authorization
 
-Telehandler uses a simple authorization scheme based on the `user_id` supplied during `StartJob`. The user identifier (ID) supplied on `Job` creation is bound to the `Job`. Any requests to `StopJob`, `GetJobStatus`, or `WatchJobOutput` **must** be sent from the user that owns the `Job`--except the special `admin` user, which can perform any actions with any jobs.
+Telehandler uses a simple authorization scheme based on the client's issued certificate. A client must present a certificate with a Subject Common Name (CN) field set to the user's ID. The user identifier (ID) supplied on `Job` creation is bound to the `Job`. Any requests to `StopJob`, `GetJobStatus`, or `WatchJobOutput` **must** use a certificate issued to the same CN to perform actions against the same job set--except the special `admin` user, which can perform any actions with any jobs.
 
 Advanced authorization is covered in [future work](#authorization-1).
 
