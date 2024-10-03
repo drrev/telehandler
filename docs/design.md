@@ -1,3 +1,9 @@
+Author: [Ryan Reeves](github.com/drrev)
+
+# Telehandler - Systems Code Challenge
+
+See Teleport [systems challenge-1](https://github.com/gravitational/careers/blob/da6d4d1854f3814c6a9873c8ae17220008bdfebe/challenges/systems/challenge-1.md).
+
 ## What?
 
 - A worker library with methods to start, stop, query status, and get the output of a job.
