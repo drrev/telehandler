@@ -21,7 +21,7 @@
 
 Telehandler is a simple service that is used to start, stop, query status, and watch the output of an arbitrary Linux process over gRPC.
 The context of each process execution is called a job and is tracked using the `Job` type.
-When a process is started using `StartJob`, a [resource name][^1] is returned to the user along with an initial status.
+When a process is started using `StartJob`, a [resource name][aip-122] is returned to the user along with an initial status.
 The resource name returned by `StartJob` is required to be passed to `StopJob`, `GetJobStatus`, and `WatchJobOutput`.
 
 To prevent one job from consuming all compute resources on the Telehandler host, all jobs have hard-coded limits for CPU, memory, and disk IO resources; additionally, all jobs are isolated into separate PID, mount, and network namespaces. For more information on both of these topics see [Resource Constraints](#resource-constraints) and [Process Isolation](#process-isolation).
@@ -49,9 +49,6 @@ sequenceDiagram
     Linux -->>- Telehandler: exit(0)
     deactivate Telehandler
 ```
-
-[^1]: https://google.aip.dev/122
-
 
 ### Job Lifecycle
 
@@ -95,11 +92,11 @@ Job management is handled through the Foreman gRPC API that is outlined in the [
 
 #### Authentication
 
-The Foreman API utilizes mTLS with TLS1.3 via the native [`crypto/tls`][^9] package to authenticate clients. All certificate key pairs are self-signed and use ECDSA P-384. ECDSA was chosen for performance. Curve P-384 was chosen as [recommended by NIST for non-repudiation][^6].
+The Foreman API utilizes mTLS with TLS1.3 via the native [`crypto/tls`][crypto-tls] package to authenticate clients. All certificate key pairs are self-signed and use ECDSA P-384. ECDSA was chosen for performance. Curve P-384 was chosen as [recommended by NIST for non-repudiation][nist].
 
-> Note: Cipher suites for TLS1.3 [_cannot_ be configured][^10] in the native Go `cytpto/tls` package. One of the following cipher suites are automatically selected: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, or TLS_CHACHA20_POLY1305_SHA256.
+> Note: Cipher suites for TLS1.3 [_cannot_ be configured][cipher-suites] in the native Go `cytpto/tls` package. One of the following cipher suites are automatically selected: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, or TLS_CHACHA20_POLY1305_SHA256.
 
-Adapting this prototype to a production environment would require minimal uplift in Kubernetes to utilize [cert-manager's csi-driver][^8] with mounted certificate key pairs.
+Adapting this prototype to a production environment would require minimal uplift in Kubernetes to utilize [cert-manager's csi-driver][csi] with mounted certificate key pairs.
 
 
 #### Authorization
@@ -134,12 +131,12 @@ Both `OPEN` and `CLOSED` would have multiple substates to further track status, 
 
 ### RootFS Replacement
 
-Replacing the rootfs for full mount isolation can be added in the future; however, it would likely be better to use [libcontainer][^1] instead of using a custom implementation. Here is a rough outline of what the process looks like to replace a rootfs in the process mount namespace:
-1. Download a root file system (rootfs), for example [alpine-minirootfs][^2].
+Replacing the rootfs for full mount isolation can be added in the future; however, it would likely be better to use [libcontainer][runc] instead of using a custom implementation. Here is a rough outline of what the process looks like to replace a rootfs in the process mount namespace:
+1. Download a root file system (rootfs), for example [alpine-minirootfs][alpine].
 2. Extract a rootfs onto disk: `mkdir alpine-minirootfs && tar -xf alpine-minirootfs-*.tar.gz -C alpine-minirootfs`
-3. Add the equivalent of `mount --rbind` to context initialization within the Executor to mount `alpine-minirootfs` using [`syscall.Mount`][^3] with flags `unix.MS_BIND | unix.MS_REC`.
-4. Pivot root to prevent escape from the chroot using [`syscall.PivotRoot`][^4] to swap the rootfs to `alpine-minirootfs` as part of context initialization.
-5. Finally, change root into `alpine-minirootfs` using [`syscall.Chroot`][^5].
+3. Add the equivalent of `mount --rbind` to context initialization within the Executor to mount `alpine-minirootfs` using [`syscall.Mount`][mount] with flags `unix.MS_BIND | unix.MS_REC`.
+4. Pivot root to prevent escape from the chroot using [`syscall.PivotRoot`][pivot_root] to swap the rootfs to `alpine-minirootfs` as part of context initialization.
+5. Finally, change root into `alpine-minirootfs` using [`syscall.Chroot`][chroot].
 6. The process now has a fully isolated rootfs.
 
 ### Network Connectivity
@@ -147,13 +144,13 @@ Replacing the rootfs for full mount isolation can be added in the future; howeve
 Network connectivity can be added--if desired--by adding a network bridge, virtual Ethernet devices, routes, and configuring network address translation (NAT) on the host.
 The complexity of providing this capability made it untenable for a simple prototype.
 
-[^1]: https://github.com/opencontainers/runc/tree/main/libcontainer
-[^2]: https://alpinelinux.org/downloads/
-[^3]: https://pkg.go.dev/syscall#Mount
-[^4]: https://pkg.go.dev/syscall#PivotRoot
-[^5]: https://pkg.go.dev/syscall#Chroot
-[^6]: https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-57pt3r1.pdf
-[^7]: https://github.com/cloudflare/cfssl
-[^8]: https://cert-manager.io/docs/usage/csi/
-[^9]: https://pkg.go.dev/crypto/tls
-[^10]: https://cs.opensource.google/go/go/+/refs/tags/go1.23.2:src/crypto/tls/common.go;l=675-684
+[aip-122]: https://google.aip.dev/122
+[runc]: https://github.com/opencontainers/runc/tree/main/libcontainer
+[alpine]: https://alpinelinux.org/downloads/
+[mount]: https://pkg.go.dev/syscall#Mount
+[pivot_root]: https://pkg.go.dev/syscall#PivotRoot
+[chroot]: https://pkg.go.dev/syscall#Chroot
+[nist]: https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-57pt3r1.pdf
+[csi]: https://cert-manager.io/docs/usage/csi/
+[crypto-tls]: https://pkg.go.dev/crypto/tls
+[cipher-suites]: https://cs.opensource.google/go/go/+/refs/tags/go1.23.2:src/crypto/tls/common.go;l=675-684
