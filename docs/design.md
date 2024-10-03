@@ -19,7 +19,10 @@ See Teleport [systems challenge-1](https://github.com/gravitational/careers/blob
 
 ## Why?
 
-To test the documentation, design, implementation, and teamwork skills of Ryan Reeves.
+
+- It helps Teleport to understand what to expect from me as a developer, how I write production code, how I reason about API design, and how I communicate when trying to understand a problem before I solve it.
+- It helps me get a feel for what it would be like to work at Teleport, as this exercise aims to simulate our day-as-usual and expose me to the type of work Teleport is doing.
+
 
 ## Details
 
