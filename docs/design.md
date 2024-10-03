@@ -124,9 +124,8 @@ To simplify output streaming, all output is multiplexed into a single stream. Du
 Output can be streamed using `WatchJobOutput`, which backfills all output from the process epoch before streaming new output. Due to this behavior, `WatchJobOutput` doubles as a way
 to stream historical output for Jobs that have terminated. If a Job is running, output will be streamed until the Job terminates or the client disconnects, whichever happens first.
 
-Internally, each new `WatchJobOutput` call creates and registers a new `OutputSink` (sink) to a job's `OutputSource` (source). Each sink contains a channel that receives events from the source, which can then be streamed over gRPC to the client. When a sink is no longer needed, it is closed, which in turn unregisters the sink from the source. This model allows a source to fan out events. Each channel buffers up-to 4096 events; however, to prevent degradation of service to other watchers, a 1-second gRPC send timeout is used.
-
-If sending to a watcher channel would block despite the gRPC send timeout, the channel will be closed and the client will need to reconnect.
+Internally, each new `WatchJobOutput` call creates a new `OutputReader` for a given `Job`, which is a blocking `io.ReadCloser`. Each `OutputReader` is independent and reads from an underlying synchronized buffer
+tied directly to a Job. If a client leaves early, the reader is closed. If the job is no longer running when `EOF` is reached, the server will stop streaming to the client and return.
 
 #### Control Groups
 
