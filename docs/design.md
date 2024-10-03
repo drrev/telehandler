@@ -104,12 +104,12 @@ Executor attempts to make the reexec wrapping completely transparent where possi
 
 #### Output Streaming
 
-All Job output is expected to be line delimited using `\n`. All output is collected from STDOUT and STDERR until the target process exits.
+All Job output is expected to be line delimited using `\n`. All output is collected from `STDOUT` and `STDERR` until the target process exits.
 
 **IMPORTANT:** All output is kept in memory for the lifetime of the Telehandler service, which should be considered when testing this prototype. In future
 versions, this can be resolved using file tailing.
 
-To simplify output streaming, all output is multiplexed into a single stream. Due to this multiplexing process, it is possible to have STDOUT lines and STDERR lines that are out of order; in most cases, log lines should only be shifted by at most one.
+To simplify output streaming, all output is multiplexed into a single stream. Due to this multiplexing process, it is possible to have `STDOUT` lines and `STDERR` lines that are out of order; in most cases, log lines should only be shifted by at most one.
 
 Output can be streamed using `WatchJobOutput`, which backfills all output from the process epoch before streaming new output. Due to this behavior, `WatchJobOutput` doubles as a way
 to stream historical output for Jobs that have terminated. If a Job is running, output will be streamed until the Job terminates or the client disconnects, whichever happens first.
