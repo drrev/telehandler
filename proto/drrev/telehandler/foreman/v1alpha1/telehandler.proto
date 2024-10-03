@@ -14,6 +14,10 @@ option go_package = "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/
 // This service is used to start, stop, query status, and get the output of a job.
 service Foreman {
   // Starts and starts a job under the given parent resource.
+  //
+  // If the operation failed, the following well-defined gRPC status codes are returned:
+  //   - PERMISSION_DENIED: The requesting user does not have permission to start a new job.
+  //   - FAILED_PRECONDITION: Execution of the command was attempted, but the command failed to start.
   rpc StartJob(StartJobRequest) returns (JobResponse) {}
   // Stops a job.
   rpc StopJob(StopJobRequest) returns (google.protobuf.Empty) {}
@@ -137,34 +141,6 @@ message JobResponse {
   JobState state = 3;
 }
 
-// A single value from a cgroup v2 stat file.
-//
-// Example: The io.stat line "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353" becomes
-//   	  StatValue{kind=KIND_IO, value="8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353"}}
-//
-// See also: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
-//
-// TODO: Replace StatValue with real metrics from https://pkg.go.dev/go.opentelemetry.io/otel/metric.
-// Actively parting KV from CPU/Memory and table format from IO was deemed out of scope for this prototype.
-message StatValue {
-  // Resource of cgroup stat.
-  enum Resource {
-    // Stat value kind is unknown. NOT USED.
-    RESOURCE_UNSPECIFIED = 0;
-    // CPU stat.
-    RESOURCE_CPU = 1;
-    // Memory stat.
-    RESOURCE_MEMORY = 2;
-    // IO stat.
-    RESOURCE_IO = 3;
-  }
-
-  // The resource that generated the stat.
-  Resource resource = 1;
-  // The raw stat line.
-  string value = 2;
-}
-
 // The current status of a given job.
 message JobStatus {
   // Output only. The resource name of the associated job.
@@ -179,6 +155,4 @@ message JobStatus {
   string parent = 1;
   // Output only. The current state of the job.
   JobState state = 2;
-  // Output only. A set of resource utilization stats.
-  repeated StatValue stats = 4;
 }
