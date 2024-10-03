@@ -116,8 +116,6 @@ Executor attempts to make the reexec wrapping completely transparent where possi
 
 #### Output Streaming
 
-All Job output is expected to be line delimited using `\n`. All output is collected from `STDOUT` and `STDERR` until the target process exits.
-
 **IMPORTANT:** All output is kept in memory for the lifetime of the Telehandler service, which should be considered when testing this prototype. In future
 versions, this can be resolved using file tailing.
 
