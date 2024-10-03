@@ -127,8 +127,8 @@ The following resource constraints are hard-coded and enforced on all jobs:
 - **CPU**: CPU usage is limited using fraction-seconds via `cpu.max` such that each process is limited to `100ms` per-second or `10%` of each second.
 - **Memory**: A low threshold is not set for memory, the default value of `0` is used. Maximum allowed memory per-process is `512MiB` with a throttle limit of `75%`--that is, `memory.max = 512MiB` and `memory.high = 384MiB`. No swap is available; therefore, `memory.swap.max` is pinned to `0`.
 - **Disk IO**: Disk IO is limited per-partition to the following read/write rates:
-    - Max read bytes per second (rbps): 10737418240 (10MiB/s)
-    - Max write bytes per second (wbps): 5368709120 (5MiB/s)
+    - Max read bytes per second (rbps): 83886080 (10MiB/s)
+    - Max write bytes per second (wbps): 41943040 (5MiB/s)
     - Max read IO operations per second (riops): 1000
     - Max write IO operations per second (wiops): 1000
 
