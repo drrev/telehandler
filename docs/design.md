@@ -128,7 +128,7 @@ Job management is handled through the Foreman gRPC API that is outlined in the [
 
 The Foreman API utilizes mTLS with TLS1.3 via the native [`crypto/tls`][crypto-tls] for two-way authentication. All certificate key pairs are self-signed and use ECDSA P-384. ECDSA was chosen for performance. Curve P-384 was chosen as [recommended by NIST for non-repudiation][nist].
 
-> Note: Cipher suites for TLS1.3 [_cannot_ be configured][cipher-suites] in the native Go `cytpto/tls` package. One of the following cipher suites are automatically selected: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, or TLS_CHACHA20_POLY1305_SHA256.
+> Note: Cipher suites for TLS1.3 [_cannot_ be configured][cipher-suites] in the native Go `cytpto/tls` package. One of the following cipher suites is automatically selected: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, or TLS_CHACHA20_POLY1305_SHA256.
 
 Adapting this prototype to a production environment would require minimal uplift in Kubernetes to utilize [cert-manager's csi-driver][csi] with mounted certificate key pairs.
 
