@@ -7,6 +7,7 @@ syntax = "proto3";
 package drrev.telehandler.foreman.v1alpha1;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1;foremanpb";
 
@@ -155,4 +156,12 @@ message JobStatus {
   string parent = 1;
   // Output only. The current state of the job.
   JobState state = 2;
+  // Output only. The job start time. This is the same as created time.
+  google.protobuf.Timestamp start_time = 3;
+  // Output only. The time at which a job stopped running.
+  // Valid only if state != JOB_STATE_RUNNING.
+  google.protobuf.Timestamp end_time = 4;
+  // Output only. Exit code of the underlying process.
+  // Valid only if state != JOB_STATE_RUNNING.
+  int32 exit_code = 5;
 }
