@@ -22,14 +22,10 @@ service Foreman {
   // Watches the output for a given job. This method does not support cursors or pagination.
   // Each new request to WatchJob will return **all** events since the start of the process.
   // At this time, only log events are supported.
-  rpc WatchJobOutput(WatchJobOutputRequest) returns (stream LogMessage) {}
+  rpc WatchJobOutput(WatchJobOutputRequest) returns (stream JobOutput) {}
 }
 
 // A request to start a new Linux process.
-//
-// If the operation failed, the following well-defined errors are returned:
-//   - PERMISSION_DENIED: The requesting user does not have permission to start a new job.
-//   - FAILED_PRECONDITION: Execution of the command was attempted, but the command failed to start.
 message StartJobRequest {
   // Required. The parent resource that owns the Job.
   //
@@ -96,14 +92,12 @@ message WatchJobOutputRequest {
   string name = 1;
 }
 
-// A LogMessage reprents a single line of output from a given job.
+// A JobOutput reprents a single line of output from a given job.
 //
 // All lines from STDOUT and STDERR are multiplexed into a single stream.
-message LogMessage {
-  // Output only. The resource name of the associated job.
-  string parent = 1;
-  // Output only. The raw log line output from the process.
-  bytes line = 2;
+message JobOutput {
+  // Output only. A data block output from the process.
+  bytes data = 1;
 }
 
 // The current state of a Job in the execution lifecycle.
