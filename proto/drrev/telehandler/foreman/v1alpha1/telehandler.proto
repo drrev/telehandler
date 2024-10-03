@@ -112,6 +112,8 @@ enum JobState {
   // The job ran to completion and exited successfully.
   // When in this state, job output can still be requested via TailJobOutput.
   JOB_STATE_COMPLETED = 3;
+  // The job was stopped by a user before completing execution.
+  JOB_STATE_STOPPED = 4;
 }
 
 // The full context of a Linux process execution.
