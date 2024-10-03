@@ -49,6 +49,11 @@ message StopJobRequest {
   //
   // Example: 2259116c-578e-413c-93bd-d6855dfcb941
   string id = 1;
+
+  // Required. The requester's user ID.
+  //
+  // Example: tester
+  string user_id = 2;
 }
 
 // A request to resolve the latest status of the job,
@@ -58,6 +63,11 @@ message GetJobStatusRequest {
   //
   // Example: 2259116c-578e-413c-93bd-d6855dfcb941
   string id = 1;
+
+  // Required. The requester's user ID.
+  //
+  // Example: tester
+  string user_id = 2;
 }
 
 // A request to watch streaming output from a target job.
@@ -66,6 +76,10 @@ message WatchJobOutputRequest {
   //
   // Example: 2259116c-578e-413c-93bd-d6855dfcb941
   string id = 1;
+  // Required. The requester's user ID.
+  //
+  // Example: tester
+  string user_id = 2;
 }
 
 // A JobOutput reprents a single line of output from a given job.
