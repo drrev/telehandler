@@ -1,0 +1,20 @@
+!include <C4/C4_Component>
+
+LAYOUT_WITH_LEGEND()
+
+title Telehandler Component Diagram
+
+Person(user, "User")
+Container(cli, "Command Line Interface", "go", "Provides users with a simple CLI to interact with the Telehandler service")
+
+Container_Boundary(api, "Telehandler") {
+    Component(foreman, "Foreman", "gRPC Service", "Allows users to start, stop, query status, and get the output of a job")
+    Component(auth, "Auth", "authn/authz", "Handles authentication and authorization of all requests")
+    Component(exec, "Executor", "worker", "Bootstraps job contexts using cgroups and namespaces, then carries out execution of Linux processes")
+
+    Rel(foreman, auth, "Authenticates requests using")
+    Rel(foreman, exec, "Executes jobs using")
+}
+
+Rel(cli, foreman, "Uses", "gRPC")
+Rel_R(user, cli, "Uses", "shell")
