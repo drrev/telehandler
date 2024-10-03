@@ -126,6 +126,7 @@ to stream historical output for Jobs that have terminated. If a Job is running, 
 
 Internally, each new `WatchJobOutput` call creates a new `OutputReader` for a given `Job`, which is a blocking `io.ReadCloser`. Each `OutputReader` is independent and reads from an underlying synchronized buffer
 tied directly to a Job. If a client leaves early, the reader is closed. If the job is no longer running when `EOF` is reached, the server will stop streaming to the client and return.
+When a job is running and `EOF` is reached, `Read()` will block until new data is available, or the process exits.
 
 #### Control Groups
 
