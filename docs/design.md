@@ -70,11 +70,13 @@ The Telehandler Job lifecycle is minimal due to the simplistic and synchronous n
 
 ### Job Execution
 
+**IMPORTANT:** Job state is maintained for the entire lifetime of the Telehandler service. Once testing has finished, the service should be closed to reclaim resources. Additionally, refrain from testing commands that write large amounts of data to STDOUT or STDERR.
+
 In order to properly support control groups (cgroups) and namespaces, bootstrapping code needs to execute to configure Linux **before** the job executes. For example, a PID of a *running* process **must** be added to `<cgroup_path>/cgroup.procs` to limit resources.
 
 The cgroup API is problematic for the way that Go forks child processes; namely, there is no way to run any code before or after a child process executes. Additionally, Telehandler **should not** be resource constrained as a Job, which is what would happen by passing [`os.Getpid()`][getpid] into `cgroup.procs`. The cgroup could be setup before the process was forked, then the PID can be added; however, that leaves some time delta ($\Delta{t}$) from $t_0$ to $t_n$ in which the forked process would run without proper resource constraints.
 
-To work around this issue, Telehandler does not forking the job target eagerly. Telehandler has a dedicated sub-command that is used to bootstrap the cgroup--and namespaces--before running the job target. Since the direct descendant of Telehandler would be another instance of Telehandler, the logic can be written to bootstrap a cgroup, add `os.Getpid()` to the group, then run the job target so that it inherits the cgroup constraints. Now, it is impossible for there to be any amount of time in which the job can execute without being part of a cgroup or namespace.
+To work around this issue, Telehandler does not fork the job target eagerly. Telehandler has a dedicated sub-command that is used to bootstrap the cgroup--and namespaces--before running the job target. Since the direct descendant of Telehandler would be another instance of Telehandler, the logic can be written to bootstrap a cgroup, add `os.Getpid()` to the group, then run the job target so that it inherits the cgroup constraints. Now, it is impossible for there to be any amount of time in which the job can execute without being part of a cgroup or namespace.
 
 The process of Telehandler executing itself in order to bootstrap a child process is called re-execution (reexec):
 
@@ -98,7 +100,23 @@ sequenceDiagram
     Executor -->> Foreman: StartProcess result
 ```
 
-Executor attempts to make this wrapping be completely transparent where possible by rebinding IO, returning the same exit code, etc.
+Executor attempts to make the reexec wrapping completely transparent where possible.
+
+#### Output Streaming
+
+All Job output is expected to be line delimited using `\n`. All output is collected from STDOUT and STDERR until the target process exits.
+
+**IMPORTANT:** All output is kept in memory for the lifetime of the Telehandler service, which should be considered when testing this prototype. In future
+versions, this can be resolved using file tailing.
+
+To simplify output streaming, all output is multiplexed into a single stream. Due to this multiplexing process, it is possible to have STDOUT lines and STDERR lines that are out of order; in most cases, log lines should only be shifted by at most one.
+
+Output can be streamed using `WatchJobOutput`, which backfills all output from the process epoch before streaming new output. Due to this behavior, `WatchJobOutput` doubles as a way
+to stream historical output for Jobs that have terminated. If a Job is running, output will be streamed until the Job terminates or the client disconnects, whichever happens first.
+
+Internally, each new `WatchJobOutput` call creates and registers a new `OutputSink` (sink) to a job's `OutputSource` (source). Each sink contains a channel that receives events from the source, which can then be streamed over gRPC to the client. When a sink is no longer needed, it is closed, which in turn unregisters the sink from the source. This model allows a source to fan out events. Each channel buffers up-to 4096 events; however, to prevent degradation of service to other watchers, a 1-second gRPC send timeout is used.
+
+If sending to a watcher channel would block despite the gRPC send timeout, the channel will be closed and the client will need to reconnect.
 
 #### Control Groups
 
@@ -107,7 +125,7 @@ Resource constraints are enforced using [Control Group v2][cgroup] (cgroup v2) i
 The following resource constraints are hard-coded and enforced on all jobs:
 
 - **CPU**: CPU usage is limited using fraction-seconds via `cpu.max` such that each process is limited to `100ms` per-second or `10%` of each second.
-- **memory**: A low threshold is not set for memory, the default value of `0` is used. Maximum allowed memory per-process is `512MiB` with a throttle limit of `75%`--that is, `memory.max = 512MiB` and `memory.high = 384MiB`. No swap is available; therefore, `memory.swap.max` is pinned to `0`.
+- **Memory**: A low threshold is not set for memory, the default value of `0` is used. Maximum allowed memory per-process is `512MiB` with a throttle limit of `75%`--that is, `memory.max = 512MiB` and `memory.high = 384MiB`. No swap is available; therefore, `memory.swap.max` is pinned to `0`.
 - **Disk IO**: Disk IO is limited per-partition to the following read/write rates:
     - Max read bytes per second (rbps): 10737418240 (10MiB/s)
     - Max write bytes per second (wbps): 5368709120 (5MiB/s)
@@ -116,7 +134,7 @@ The following resource constraints are hard-coded and enforced on all jobs:
 
 #### Namespaces
 
-Jobs are isolated into separate PID, mount, and network namespaces when the [Executor](#job-execution) re-executes. All bootstrapping for the namespace occurs **before** the Job process is started. As part of the bootstrapping process, `/proc` is remounted to hide host process information, and the hostname is forced to `sandbox` to hide the real hostname.
+Jobs are isolated into separate PID, mount, and network namespaces when the [Executor](#job-execution) reexecs. All bootstrapping for the namespace occurs **before** the Job process is started. As part of the bootstrapping process, `/proc` is remounted to hide host process information, and the hostname is forced to `sandbox` to hide the real hostname.
 
 **IMPORTANT:** Due to scope, network connectivity was left out of this prototype, and the network namespace is unprovisioned; therefore, there is no external connectivity and any process requiring a network connection will fail. Suggestions are made for future work in [Network Connectivity](#network-connectivity).
 
@@ -134,6 +152,10 @@ Adapting this prototype to a production environment would require minimal uplift
 
 
 #### Authorization
+
+Telehandler uses a simple authorization scheme based on the certificates issued to clients. A client must present a certificate with a Subject Common Name (CN) field matching `tele-tester` or the request is denied.
+
+Advanced authorization is covered in [future work](#authorization-1).
 
 ### Command Line Interface
 
@@ -200,7 +222,7 @@ Performing network configuration is highly complex and would be better served by
 
 ### Authorization
 
-In a production system, the simple authorization used by the initial prototype is severely lacking.
+In a production system, the simple authorization used by the initial prototype is severely lacking. One possible solution is to use OAuth with [certificate-bound access tokens][rfc8705].
 
 To make the service production ready, there are multiple approaches that could be used for authorization that have different tradeoffs:
   1. Implement full RBAC within the Telehandler service that passes a verb, [resource name][aip-122], and the UID to verify that the user has permission to perform the requested operation against the provided resource.
@@ -224,4 +246,5 @@ In most cases, it is better to handle authorization before requests reach a serv
 [netlink]: https://github.com/vishvananda/netlink
 [nist]: https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-57pt3r1.pdf
 [pivot_root]: https://pkg.go.dev/syscall#PivotRoot
+[rfc8705]: https://datatracker.ietf.org/doc/html/rfc8705
 [runc]: https://github.com/opencontainers/runc/tree/main/libcontainer
