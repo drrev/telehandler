@@ -197,11 +197,6 @@ state COMPLETE
 
 This section covers major concessions and future remediation approaches that can be taken to shore up the design.
 
-### Job State
-
-Typically, in a production system, there would be a worker pool that carry out execution of jobs that have not reached a terminal state. Asynchronous job status can be represented using `OPEN` and `CLOSED`: `OPEN` is an active state in which a job can progress further, and `CLOSED` is a terminal state.
-Both `OPEN` and `CLOSED` would have multiple substates to further track status, depending on the requirements of the system, such as `OPEN.RUNNING` or `OPEN.SUSPENDED`.
-
 ### RootFS Replacement
 
 Replacing the rootfs for full mount isolation can be added in the future; however, it would likely be better to use [libcontainer][runc] instead of using a custom implementation. Here is a rough outline of what the process looks like to replace a rootfs in the process mount namespace:
