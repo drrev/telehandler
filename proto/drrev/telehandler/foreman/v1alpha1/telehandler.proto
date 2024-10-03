@@ -32,11 +32,15 @@ service Foreman {
 
 // A request to start a new Linux process.
 message StartJobRequest {
+  // Required. The ID of the user starting the process.
+  //
+  // Example: tester
+  string user_id = 1;
   // Required. The Linux command to run on the target system.
-  string command = 1;
+  string command = 2;
 
   // Optional. Arguments to pass to the command.
-  repeated string args = 2;
+  repeated string args = 3;
 }
 
 // A request to stop a Job.
