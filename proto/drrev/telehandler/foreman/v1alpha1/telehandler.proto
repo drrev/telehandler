@@ -41,6 +41,7 @@ message StartJobRequest {
   //
   // TODO: Add/validate parent resource. Removed to simplify the design for prototyping.
   // string parent = 1;
+  reserved 1, 4;
 
   // Required. The Linux command to run on the target system.
   string command = 2;
@@ -49,7 +50,7 @@ message StartJobRequest {
   repeated string args = 3;
 
   // Optional. Environment to pass to the command.
-  map<string, string> env = 4;
+  // map<string, string> env = 4;
 }
 
 // A request to stop a Job.
