@@ -155,6 +155,25 @@ Job management is handled through the Foreman gRPC API that is outlined in the [
 
 The Foreman API utilizes mTLS with TLS1.3 via the native [`crypto/tls`][crypto-tls] for two-way authentication. All certificate key pairs are self-signed and use ECDSA P-256. ECDSA was chosen for performance. Curve P-256 was chosen as [recommended by NIST for authentication][nist].
 
+To keep things simple for this prototype, the root CA is locally generated with a self-signed cert. If testing is being run across hosts, it is up to the reader to ensure certificate and key
+availability for the client and server. A single self-signed key pair is generated to be used as the root certificate authority (CA), which is then used to issue the client and server certificates.
+Since the root CA is self-signed, the default system cert pool cannot be used. Command line arguments are used to specify the CA cert path, which is loaded into a new x509 cert pool for the client or server.
+
+```mermaid
+flowchart LR
+    user --> cfssl
+    cfssl --> rck["Self-Signed Root CA Key"]
+    cfssl --> rcc["Root CA Cert"]
+    rck --> ckc["Client Key+Cert"]
+    ckc --> client
+    rcc --> client
+    rck --> skc["Server Key+Cert"]
+    skc --> server
+    rcc --> server
+```
+
+Although this example is limited to a single client, any number of client key pairs can be generated and used without changes to the server--unless the issued certs expire, which requires reissuing new certs manually.
+
 > Note: Cipher suites for TLS1.3 [_cannot_ be configured][cipher-suites] in the native Go `cytpto/tls` package. One of the following cipher suites is automatically selected: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, or TLS_CHACHA20_POLY1305_SHA256.
 
 Adapting this prototype to a production environment would require minimal uplift in Kubernetes to utilize [cert-manager's csi-driver][csi] with mounted certificate key pairs.
