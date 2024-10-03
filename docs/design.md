@@ -181,7 +181,7 @@ Adapting this prototype to a production environment would require minimal uplift
 
 #### Authorization
 
-Telehandler uses a simple authorization scheme based on the certificates issued to clients. A client must present a certificate with a Subject Common Name (CN) field matching `tele-tester` or the request is denied.
+Telehandler uses a simple authorization scheme based on the `user_id` supplied during `StartJob`. The user identifier (ID) supplied on `Job` creation is bound to the `Job`. Any requests to `StopJob`, `GetJobStatus`, or `WatchJobOutput` **must** be sent from the user that owns the `Job`--except the special `admin` user, which can perform any actions with any jobs.
 
 Advanced authorization is covered in [future work](#authorization-1).
 
@@ -258,6 +258,7 @@ In most cases, it is better to handle authorization before requests reach a serv
 
 [aip-122]: https://google.aip.dev/122
 [alpine]: https://alpinelinux.org/downloads/
+[cfssl]: https://github.com/cloudflare/cfssl
 [cgroup]: https://docs.kernel.org/admin-guide/cgroup-v2.html
 [chroot]: https://pkg.go.dev/syscall#Chroot
 [cipher-suites]: https://cs.opensource.google/go/go/+/refs/tags/go1.23.2:src/crypto/tls/common.go;l=675-684
