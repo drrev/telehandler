@@ -1,0 +1,117 @@
+// TODO: Follow Google AIP standards:
+// - Add resource types: https://google.aip.dev/123.
+// - Add google.api.FieldBehavior annotations to fields: https://google.aip.dev/203.
+// - Add http annotations: https://google.aip.dev/127.
+syntax = "proto3";
+
+package drrev.telehandler.foreman.v1alpha1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1;foremanpb";
+
+// The Foreman service manages all jobs within the system.
+// This service is used to start, stop, query status, and get the output of a job.
+service ForemanService {
+  // Starts a job under the given parent resource.
+  //
+  // If the operation failed, the following well-defined gRPC status codes are returned:
+  //   - PERMISSION_DENIED: The requesting user does not have permission to start a new job.
+  //   - FAILED_PRECONDITION: Execution of the command was attempted, but the command failed to start.
+  rpc StartJob(StartJobRequest) returns (JobResponse) {}
+  // Stops a job.
+  rpc StopJob(StopJobRequest) returns (google.protobuf.Empty) {}
+  // Retrieves the current status of a given Job.
+  rpc GetJobStatus(GetJobStatusRequest) returns (JobStatus) {}
+  // Watches the output for a given job. This method does not support cursors or pagination.
+  // Each new request to WatchJob will return **all** events since the start of the process.
+  // At this time, only log events are supported.
+  rpc WatchJobOutput(WatchJobOutputRequest) returns (stream JobOutput) {}
+}
+
+// A request to start a new Linux process.
+message StartJobRequest {
+  // Required. The Linux command to run on the target system.
+  string command = 1;
+
+  // Optional. Arguments to pass to the command.
+  repeated string args = 2;
+}
+
+// A request to stop a Job.
+message StopJobRequest {
+  // Required. The UUIDv4 of the job to stop.
+  //
+  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
+  string id = 1;
+}
+
+// A request to resolve the latest status of the job,
+// including the current state and resource utilization.
+message GetJobStatusRequest {
+  // Required. The UUIDv4 of the job to stop.
+  //
+  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
+  string id = 1;
+}
+
+// A request to watch streaming output from a target job.
+message WatchJobOutputRequest {
+  // Required. The UUIDv4 of the job to stop.
+  //
+  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
+  string id = 1;
+}
+
+// A JobOutput reprents a single line of output from a given job.
+//
+// All lines from STDOUT and STDERR are multiplexed into a single stream.
+message JobOutput {
+  // Output only. A data block output from the process.
+  bytes data = 1;
+}
+
+// The current state of a Job in the execution lifecycle.
+enum JobState {
+  // The state of the job is not specified.
+  JOB_STATE_UNSPECIFIED = 0;
+  // The job is currently running and active.
+  JOB_STATE_RUNNING = 1;
+  // The job failed during execution.
+  // If a job is in this state, request the job output with TailJobOutput to discern the cause of failure.
+  JOB_STATE_FAILED = 2;
+  // The job ran to completion and exited successfully.
+  // When in this state, job output can still be requested via TailJobOutput.
+  JOB_STATE_COMPLETED = 3;
+  // The job was stopped by a user before completing execution.
+  JOB_STATE_STOPPED = 4;
+}
+
+// The full context of a Linux process execution.
+message JobResponse {
+  // Output only. A system-assigned UUIDv4 unique identifier for this Job.
+  //
+  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
+  string id = 1;
+  // Output only. The current state of the job.
+  JobState state = 2;
+}
+
+// The current status of a given job.
+message JobStatus {
+  // Output only. A system-assigned UUIDv4 unique identifier for the Job.
+  //
+  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
+  string id = 1;
+  // Output only. The current state of the job.
+  JobState state = 2;
+  // Output only. The job start time. This is the same as created time.
+  google.protobuf.Timestamp start_time = 3;
+  // Output only. The time at which a job stopped running.
+  // Valid only if state != JOB_STATE_RUNNING.
+  google.protobuf.Timestamp end_time = 4;
+  // Output only. Exit code of the underlying process.
+  // Valid only if state != JOB_STATE_RUNNING.
+  int32 exit_code = 5;
+}
