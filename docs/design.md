@@ -154,7 +154,7 @@ Job management is handled through the Foreman gRPC API that is outlined in the [
 
 #### Authentication
 
-The Foreman API utilizes mTLS with TLS1.3 via the native [`crypto/tls`][crypto-tls] for two-way authentication. All certificate key pairs are self-signed and use ECDSA P-256. ECDSA was chosen for performance. Curve P-256 was chosen as [recommended by NIST for authentication][nist].
+The Foreman API utilizes mTLS with TLS1.3 via the native [`crypto/tls`][crypto-tls] for two-way authentication. The single certificate authority is self-signed, and all key pairs will use ECDSA P-256. ECDSA was chosen for performance. Curve P-256 was chosen as [recommended by NIST for authentication][nist].
 
 To keep things simple for this prototype, the root CA is locally generated with a self-signed cert. If testing is being run across hosts, it is up to the reader to ensure certificate and key
 availability for the client and server. A single self-signed key pair is generated to be used as the root certificate authority (CA), which is then used to issue the client and server certificates.
