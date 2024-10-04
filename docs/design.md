@@ -65,17 +65,17 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> RUNNING
-    RUNNING --> FAILED
+    RUNNING --> FAILED: exit_code != 0
     FAILED --> [*]
-    RUNNING --> COMPLETED
-    RUNNING --> STOPPED
+    RUNNING --> COMPLETED: exit_code == 0
+    RUNNING --> STOPPED: StopJob called
     STOPPED --> [*]
     COMPLETED --> [*]
 ```
 
 - `RUNNING`: The underlying Linux process has been started, but has not exited.
 - `FAILED`: The Linux process either failed to start or exited with a non-zero code.
-- `STOPPED`: The job was stopped by a user before completing execution.
+- `STOPPED`: A `RUNNING` job that was stopped by a user before completing execution regardless of exit code.
 - `COMPLETED`: The Linux process started and exited successfully.
 
 The Telehandler Job lifecycle is minimal due to the simplistic and synchronous nature of this system. Each Job is started synchronously in the `StartJob` call, so there is no need for a `PENDING` state or a more complicated substate design. There are no retries; jobs are all one-shot and run to completion--unless the job is interrupted by a call to `StopJob`.
@@ -96,7 +96,7 @@ The process of Telehandler executing itself in order to bootstrap a child proces
 sequenceDiagram
     autonumber
     Foreman ->> Executor: Start Job
-    Executor ->>+ Telehandler: StartProcess Telehandler (reexec)<br/>in new PID, mount, and network namespaces
+    Executor ->>+ Telehandler: StartProcess Telehandler (reexec)<br/>in new PID, mount, and network namespaces`
     note over Telehandler,Executor: Everything in the red box <br/>is running in a new process
     rect rgb(255,235,238)
     Telehandler ->>+ Executor: Start Job
