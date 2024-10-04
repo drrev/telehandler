@@ -96,7 +96,7 @@ The process of Telehandler executing itself in order to bootstrap a child proces
 sequenceDiagram
     autonumber
     Foreman ->> Executor: Start Job
-    Executor ->>+ Telehandler: StartProcess Telehandler (reexec)<br/>in new PID, mount, and network namespaces`
+    Executor ->>+ Telehandler: StartProcess Telehandler (reexec)<br/>in new PID, mount, and network namespaces
     note over Telehandler,Executor: Everything in the red box <br/>is running in a new process
     rect rgb(255,235,238)
     Telehandler ->>+ Executor: Start Job
