@@ -10,9 +10,10 @@ import (
 // A Buffer is a variable-sized buffer of bytes with [Buffer.Read] and [Buffer.Write] methods.
 // The zero value MUST NEVER be used--use [NewBuffer].
 type Buffer struct {
-	cond *CondChan
-	buf  *bytes.Buffer
-	m    *sync.RWMutex
+	cond   *CondChan
+	buf    *bytes.Buffer
+	m      *sync.RWMutex
+	closed bool
 }
 
 // Len returns the total number of bytes in the buffer.
@@ -37,20 +38,30 @@ func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 	b.m.RLock()
 	defer b.m.RUnlock()
 	if off > int64(b.buf.Len()) {
-		return 0, io.EOF
+		if b.closed {
+			return 0, io.EOF
+		}
+		return 0, nil
 	}
 
 	raw := b.buf.Bytes()
 	n = copy(p, raw[off:])
-	if len(p) > n {
-		err = io.ErrUnexpectedEOF
-	}
 	return
 }
 
 // Wait for Buffer to change.
 func (b *Buffer) Wait(ctx context.Context, seq int64) (newSeq int64) {
 	return b.cond.Wait(ctx, seq)
+}
+
+// Close implements io.Closer.
+// Close should only be called if no more data will be written.
+func (b *Buffer) Close() error {
+	b.m.Lock()
+	defer b.m.Unlock()
+	defer b.cond.Broadcast()
+	b.closed = true
+	return nil
 }
 
 // NewBuffer creates and initializes a new [Buffer] using buf as its
