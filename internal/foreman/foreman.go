@@ -145,6 +145,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 			n, _ := out.ReadAt(buf, off)
 			off += int64(n)
 
+			// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
 			err := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
 			if err != nil {
 				return err
