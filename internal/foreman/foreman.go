@@ -3,7 +3,6 @@ package foreman
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
 	"github.com/drrev/telehandler/internal/auth"
@@ -30,8 +29,6 @@ type Executor interface {
 	Output(id uuid.UUID) (*safe.Buffer, error)
 	Stop(id uuid.UUID) error
 }
-
-var _ foremanpb.ForemanServiceServer = (*Service)(nil)
 
 // Service implements [foremanpb.ForemanServiceServer].
 type Service struct {
