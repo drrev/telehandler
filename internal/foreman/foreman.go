@@ -125,10 +125,8 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	// TODO: Move to a dedicated OutputReader
 	// drain buffer
 	for {
-		// wait a max of 5 seconds for changes
-		tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		seq = out.Wait(tctx, seq)
-		cancel()
+		// wait for changes
+		seq = out.Wait(ctx, seq)
 
 		bl := int64(out.Len())
 		if off >= bl {
