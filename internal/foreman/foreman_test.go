@@ -15,51 +15,48 @@ func TestService_resolveJob(t *testing.T) {
 	ctx := auth.CommonNamesToCtx(context.TODO(), []string{"test-user"})
 	job := work.NewJob("test-user", "", []string{})
 
-	type fields struct {
-		store JobStore
-	}
 	type args struct {
 		ctx   context.Context
 		jobID string
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		exe     Executor
 		args    args
 		want    *work.Job
 		wantErr bool
 	}{
 		{
 			name:    "empty ctx",
-			fields:  fields{store: nil},
+			exe:     nil,
 			args:    args{ctx: context.TODO(), jobID: ""},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "invalid job ID",
-			fields:  fields{store: nil},
+			exe:     nil,
 			args:    args{ctx: ctx, jobID: "invalid-id"},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "missing job",
-			fields:  fields{store: mockJobStore(nil, fmt.Errorf("not found"))},
+			exe:     mockExecFn(nil, fmt.Errorf("not found")),
 			args:    args{ctx: ctx, jobID: "invalid-id"},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "ownership mismatch",
-			fields:  fields{store: mockJobStore(work.NewJob("invalid", "", []string{}), nil)},
+			exe:     mockExecFn(work.NewJob("invalid", "", []string{}), nil),
 			args:    args{ctx: ctx, jobID: "8dbc07b7-084f-47d1-bc72-081f007f7e7a"},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "valid access",
-			fields:  fields{store: mockJobStore(job, nil)},
+			exe:     mockExecFn(job, nil),
 			args:    args{ctx: ctx, jobID: "8dbc07b7-084f-47d1-bc72-081f007f7e7a"},
 			want:    job,
 			wantErr: false,
@@ -67,9 +64,7 @@ func TestService_resolveJob(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{
-				store: tt.fields.store,
-			}
+			s := &Service{tt.exe}
 			got, err := s.resolveJob(tt.args.ctx, tt.args.jobID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.resolveJob() error = %v, wantErr %v", err, tt.wantErr)
@@ -82,17 +77,24 @@ func TestService_resolveJob(t *testing.T) {
 	}
 }
 
-func mockJobStore(job *work.Job, err error) *mockStore {
-	return &mockStore{cb: func(id uuid.UUID) (*work.Job, error) {
+func mockExecFn(job *work.Job, err error) *mockExec {
+	return &mockExec{cb: func(id uuid.UUID) (*work.Job, error) {
 		return job, err
 	}}
 }
 
-type mockStore struct {
-	JobStore
+type mockExec struct {
+	Executor
 	cb func(id uuid.UUID) (*work.Job, error)
 }
 
-func (m *mockStore) Find(id uuid.UUID) (*work.Job, error) {
-	return m.cb(id)
+func (m *mockExec) Find(id uuid.UUID) (job work.Job, err error) {
+	var j *work.Job
+
+	j, err = m.cb(id)
+	if j != nil {
+		job = *j
+	}
+
+	return
 }

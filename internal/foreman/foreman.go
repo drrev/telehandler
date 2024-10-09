@@ -14,32 +14,26 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-// JobStore is the minimal interface needed by Service to handle Job persistence.
-type JobStore interface {
-	Find(id uuid.UUID) (*work.Job, error)
-	Save(j *work.Job) error
-}
 
 // Executor is the minimal interface needed to manage jobs for Start/Stop/WatchOuput.
 type Executor interface {
-	Start(j *work.Job) error
+	Start(j work.Job) (work.Job, error)
+	Find(id uuid.UUID) (work.Job, error)
 	Output(id uuid.UUID) (*safe.Buffer, error)
+	Running(jobID uuid.UUID) (v bool, ok bool)
 	Stop(id uuid.UUID) error
 }
 
 // Service implements [foremanpb.ForemanServiceServer].
 type Service struct {
-	store JobStore
-	exe   Executor
+	exe Executor
 }
 
 // NewService creates a new [Service] instance that implements [foremanpb.ForemanServiceServer] and
 // can be registered with [foremanpb.RegisterForemanServiceServer].
-func NewService(store JobStore, exe Executor) *Service {
-	return &Service{store, exe}
+func NewService(exe Executor) *Service {
+	return &Service{exe}
 }
 
 // GetJobStatus implements foremanpb.ForemanServiceServer.
@@ -48,14 +42,7 @@ func (s *Service) GetJobStatus(ctx context.Context, req *foremanpb.GetJobStatusR
 	if err != nil {
 		return nil, err
 	}
-
-	return &foremanpb.JobStatus{
-		Id:        job.ID.String(),
-		State:     codec.JobStateToPb(job.LoadState()),
-		StartTime: timestamppb.New(job.LoadStartTime()),
-		EndTime:   timestamppb.New(job.LoadEndTime()),
-		ExitCode:  int32(job.LoadExitCode()),
-	}, nil
+	return codec.JobToJobStatePb(job), nil
 }
 
 // StartJob implements foremanpb.ForemanServiceServer.
@@ -69,20 +56,15 @@ func (s *Service) StartJob(ctx context.Context, req *foremanpb.StartJobRequest) 
 	// TODO: which name should this pick? without a resource specifier or indicator in the message itself, there's no way to know
 	name := names[0]
 
-	job := work.NewJob(name, req.GetCommand(), req.GetArgs())
-
-	if err := s.store.Save(job); err != nil {
-		return nil, status.Error(codes.Internal, "failed to save job")
-	}
-
-	if err := s.exe.Start(job); err != nil {
+	job, err := s.exe.Start(*work.NewJob(name, req.GetCommand(), req.GetArgs()))
+	if err != nil {
 		slog.ErrorContext(ctx, "Failed to start job", slog.String("cmd", req.GetCommand()), slog.Any("args", req.GetArgs()))
 		return nil, status.Error(codes.Internal, "failed to start job")
 	}
 
 	return &foremanpb.JobResponse{
 		Id:    job.ID.String(),
-		State: codec.JobStateToPb(job.LoadState()),
+		State: codec.JobStateToPb(job.State),
 	}, nil
 }
 
@@ -125,7 +107,11 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	for {
 		// wait for changes
 		seq = out.Wait(ctx, seq)
-		running := job.Running()
+		running, ok := s.exe.Running(job.ID)
+		if !ok {
+			return nil
+		}
+
 		bl := int64(out.Len())
 
 		if !running && off >= bl {
@@ -167,28 +153,31 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 // With resource names, all of this can be handled in an interceptor with protoreflect to get the "name" field,
 // then validate that the resource name is scoped to the requester. If it isn't, reject the request.
 // Then, each of these handlers would only be responsible for fetching the Job from storage.
-func (s *Service) resolveJob(ctx context.Context, jobID string) (*work.Job, error) {
+func (s *Service) resolveJob(ctx context.Context, jobID string) (job work.Job, err error) {
 	names, err := auth.CommonNamesFromCtx(ctx)
 	if err != nil {
-		return nil, status.Error(codes.PermissionDenied, err.Error())
+		err = status.Error(codes.PermissionDenied, err.Error())
+		return
 	}
 
 	// 1. Resolve the job
-	id, err := uuid.Parse(jobID)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid job id '%v'", jobID)
+	id, e := uuid.Parse(jobID)
+	if e != nil {
+		err = status.Errorf(codes.InvalidArgument, "invalid job id '%v'", jobID)
+		return
 	}
 
-	job, err := s.store.Find(id)
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "no job found for id '%v'", jobID)
+	job, e = s.exe.Find(id)
+	if e != nil {
+		err = status.Errorf(codes.NotFound, "no job found for id '%v'", jobID)
+		return
 	}
 
 	// 2. Validate that the requester is admin or the user that created the job
-	if err := auth.ValidateAccess(job, names); err != nil {
+	if e := auth.ValidateAccess(&job, names); e != nil {
 		slog.Info("Denied access", slog.Any("names", names), slog.Any("job", job))
-		return nil, status.Error(codes.PermissionDenied, "")
+		err = status.Error(codes.PermissionDenied, "")
 	}
 
-	return job, nil
+	return
 }
