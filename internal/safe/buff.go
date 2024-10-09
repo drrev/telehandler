@@ -37,7 +37,7 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 	b.m.RLock()
 	defer b.m.RUnlock()
-	if off > int64(b.buf.Len()) {
+	if off >= int64(b.buf.Len()) {
 		if b.closed {
 			return 0, io.EOF
 		}
@@ -46,6 +46,11 @@ func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 
 	raw := b.buf.Bytes()
 	n = copy(p, raw[off:])
+
+	if b.closed && off >= int64(b.buf.Len()-n) {
+		err = io.EOF
+	}
+
 	return
 }
 

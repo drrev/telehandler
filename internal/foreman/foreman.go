@@ -125,31 +125,28 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	for {
 		// wait for changes
 		seq = out.Wait(ctx, seq)
-
+		running := job.Running()
 		bl := int64(out.Len())
-		if off >= bl {
+
+		if !running && off >= bl {
 			// we have reached the end of available data
 			// no more data is coming if the job is not running, bail
-			if !job.Running() {
-				return nil
-			}
-
-			// send empty to make sure the client is waiting
-			err := srv.Send(&foremanpb.JobOutput{})
-			if err != nil {
-				return err
-			}
+			return nil
 		}
 
 		// send any available data
 		for off < bl {
-			n, _ := out.ReadAt(buf, off)
+			n, rerr := out.ReadAt(buf, off)
 			off += int64(n)
 
 			// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
 			err := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
 			if err != nil {
 				return err
+			}
+
+			if rerr != nil {
+				return nil
 			}
 		}
 
