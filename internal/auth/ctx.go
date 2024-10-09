@@ -22,10 +22,6 @@ type wrappedStream struct {
 	ctx context.Context
 }
 
-func wrapStream(ss grpc.ServerStream, cb func(ctx context.Context) context.Context) *wrappedStream {
-	return &wrappedStream{ServerStream: ss, ctx: cb(ss.Context())}
-}
-
 // Context returns the custom context instead of the wrapped grpc.StreamServer context.
 func (w *wrappedStream) Context() context.Context {
 	return w.ctx
