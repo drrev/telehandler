@@ -7,10 +7,8 @@ import (
 )
 
 var (
-	cert       = "ssl/server.pem"
-	key        = "ssl/server-key.pem"
-	root       = "ssl/root.pem"
 	cgroupRoot = "/sys/fs/cgroup"
+	caCertPath = "ssl/root.pem"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -29,9 +27,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cert, "cert", "c", cert, "Server cert path")
-	rootCmd.PersistentFlags().StringVarP(&key, "key", "k", key, "Server key path")
-	rootCmd.PersistentFlags().StringVarP(&root, "root", "r", root, "Root CA cert path")
 	rootCmd.PersistentFlags().StringVar(&cgroupRoot, "cgroup-root", cgroupRoot, "Path to cgroup v2 mount")
-
+	rootCmd.PersistentFlags().StringVarP(&caCertPath, "root", "r", caCertPath, "Root CA cert path")
 }
