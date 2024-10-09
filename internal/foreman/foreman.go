@@ -103,7 +103,9 @@ func (s *Service) StopJob(ctx context.Context, req *foremanpb.StopJobRequest) (*
 
 // WatchJobOutput implements foremanpb.ForemanServiceServer.
 func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.ServerStreamingServer[foremanpb.JobOutput]) error {
-	job, err := s.resolveJob(srv.Context(), req.GetId())
+	ctx := srv.Context()
+
+	job, err := s.resolveJob(ctx, req.GetId())
 	if err != nil {
 		return err
 	}
@@ -114,7 +116,6 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	}
 
 	// stream output to the client
-	ctx := srv.Context()
 	off := int64(0)
 	seq := int64(0)
 	buf := make([]byte, 4096)
