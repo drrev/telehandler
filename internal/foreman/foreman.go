@@ -39,6 +39,8 @@ type Service struct {
 	exe   Executor
 }
 
+// NewService creates a new [Service] instance that implements [foremanpb.ForemanServiceServer] and
+// can be registered with [foremanpb.RegisterForemanServiceServer].
 func NewService(store JobStore, exe Executor) *Service {
 	return &Service{store, exe}
 }
