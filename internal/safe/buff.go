@@ -82,10 +82,3 @@ func NewBuffer(buf []byte) *Buffer {
 	var b bytes.Buffer
 	return &Buffer{cond: NewCond(), buf: &b, m: &sync.RWMutex{}}
 }
-
-// NewBufferString creates and initializes a new [Buffer] using string s as its
-// initial contents. It is intended to prepare a buffer to read an existing
-// string.
-func NewBufferString(s string) *Buffer {
-	return NewBuffer([]byte(s))
-}
