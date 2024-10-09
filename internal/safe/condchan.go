@@ -4,6 +4,8 @@ import "context"
 
 // CondChan is a simplified channel-based implementation of
 // sync.Cond for broadcasting changes with context cancellation support.
+//
+// CondChan should only be instantiated with [NewCond].
 type CondChan struct {
 	ch chan state
 }
@@ -52,6 +54,7 @@ func (c *CondChan) Broadcast() {
 	c.ch <- state{st.seq + 1, nil}
 }
 
+// NewCond creates a new [CondChan] that is ready for use.
 func NewCond() *CondChan {
 	st := make(chan state, 1)
 	st <- state{seq: 0}
