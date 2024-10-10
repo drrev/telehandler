@@ -7,6 +7,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -30,6 +31,16 @@ func TestServerStreamInterceptor(t *testing.T) {
 		}
 	}
 
+	noError := func(e error) bool { return e == nil }
+	errorTextContains := func(str string) func(e error) bool {
+		return func(e error) bool {
+			if e == nil {
+				return len(str) == 0
+			}
+			return strings.Contains(e.Error(), str)
+		}
+	}
+
 	type args struct {
 		ss      grpc.ServerStream
 		handler grpc.StreamHandler
@@ -37,22 +48,22 @@ func TestServerStreamInterceptor(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantErr bool
+		wantErr func(e error) bool
 	}{
 		{
 			name:    "invalid Context",
 			args:    args{ss: &mockServerStream{ctx: context.Background()}},
-			wantErr: true,
+			wantErr: errorTextContains("failed resolve peer"),
 		},
 		{
 			name:    "invalid AuthInfo",
 			args:    args{ss: &mockServerStream{ctx: peer.NewContext(context.Background(), &peer.Peer{AuthInfo: nil})}},
-			wantErr: true,
+			wantErr: errorTextContains("invalid peer authentication"),
 		},
 		{
 			name:    "empty CNs",
 			args:    args{ss: &mockServerStream{ctx: peer.NewContext(context.Background(), &peer.Peer{AuthInfo: credentials.TLSInfo{State: tls.ConnectionState{}}})}},
-			wantErr: true,
+			wantErr: errorTextContains("no valid subject CN found"),
 		},
 		{
 			name: "admin CN",
@@ -68,7 +79,7 @@ func TestServerStreamInterceptor(t *testing.T) {
 					},
 				})},
 			},
-			wantErr: false,
+			wantErr: noError,
 		},
 		{
 			name: "multiple CNs",
@@ -85,13 +96,13 @@ func TestServerStreamInterceptor(t *testing.T) {
 					},
 				})},
 			},
-			wantErr: false,
+			wantErr: noError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ServerStreamInterceptor(nil, tt.args.ss, nil, tt.args.handler); (err != nil) != tt.wantErr {
-				t.Errorf("ServerStreamInterceptor() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ServerStreamInterceptor(nil, tt.args.ss, nil, tt.args.handler); !tt.wantErr(err) {
+				t.Errorf("ServerStreamInterceptor() error = %v", err)
 			}
 		})
 	}
