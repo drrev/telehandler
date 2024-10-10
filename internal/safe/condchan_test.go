@@ -90,7 +90,7 @@ func benchmarkCond(b *testing.B, waiters int) {
 	c := NewCond()
 	done := make(chan bool, waiters)
 
-	idVal := 0
+	id := 0
 	mu := sync.Mutex{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -109,15 +109,14 @@ func benchmarkCond(b *testing.B, waiters int) {
 			seq := int64(0)
 			for i := 0; i < b.N; i++ {
 				mu.Lock()
-				if id := idVal; id == -1 {
+				if id == -1 {
 					mu.Unlock()
 					break
 				}
-				idVal++
-				id := idVal
+				id++
 
 				if id == waiters+1 {
-					idVal = 0
+					id = 0
 					mu.Unlock()
 					c.Broadcast()
 				} else {
@@ -126,7 +125,7 @@ func benchmarkCond(b *testing.B, waiters int) {
 				}
 			}
 			mu.Lock()
-			idVal = -1
+			id = -1
 			mu.Unlock()
 			c.Broadcast()
 			done <- true
