@@ -8,7 +8,6 @@ import (
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
 	"github.com/drrev/telehandler/internal/auth"
 	"github.com/drrev/telehandler/internal/codec"
-	"github.com/drrev/telehandler/internal/safe"
 	"github.com/drrev/telehandler/pkg/work"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -21,7 +20,7 @@ import (
 type Executor interface {
 	Start(j work.Job) (work.Job, error)
 	Find(id uuid.UUID) (work.Job, error)
-	Output(id uuid.UUID) (*safe.Buffer, error)
+	Output(ctx context.Context, id uuid.UUID) (*work.OutputReader, error)
 	Running(jobID uuid.UUID) (v bool, ok bool)
 	Stop(id uuid.UUID) error
 }
@@ -93,52 +92,28 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		return err
 	}
 
-	out, err := s.exe.Output(job.ID)
+	r, err := s.exe.Output(ctx, job.ID)
 	if err != nil {
 		return err
 	}
 
-	// stream output to the client
-	off := int64(0)
-	seq := int64(0)
 	buf := make([]byte, 4096)
-
-	// TODO: Move to a dedicated OutputReader
 	// drain buffer
 	for {
-		// wait for changes
-		seq = out.Wait(ctx, seq)
-		running, ok := s.exe.Running(job.ID)
-		if !ok {
-			return nil
+		n, err := r.Read(buf)
+		if err != nil {
+			return err
 		}
 
-		bl := int64(out.Len())
-
-		if !running && off >= bl {
-			// we have reached the end of available data
-			// no more data is coming if the job is not running, bail
-			return nil
+		if n < 1 {
+			continue
 		}
 
-		// send any available data
-		for off < bl {
-			n, rerr := out.ReadAt(buf, off)
-			off += int64(n)
-
-			// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
-			err := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
-			if err != nil {
-				return err
-			}
-
-			if rerr != nil {
-				return nil
-			}
+		// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
+		err = srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
+		if err != nil {
+			return err
 		}
-
-		// avoid checking job state here in case state changed, but bl increased
-		// this will cause an extra 5s wait, but that is acceptable
 	}
 }
 

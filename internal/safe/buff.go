@@ -39,24 +39,33 @@ func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 	defer b.m.RUnlock()
 	if off >= int64(b.buf.Len()) {
 		if b.closed {
-			return 0, io.EOF
+			err = io.EOF
+			return
 		}
-		return 0, nil
+		return
 	}
 
 	raw := b.buf.Bytes()
 	n = copy(p, raw[off:])
-
-	if b.closed && off >= int64(b.buf.Len()-n) {
-		err = io.EOF
-	}
 
 	return
 }
 
 // Wait for Buffer to change.
 func (b *Buffer) Wait(ctx context.Context, seq int64) (newSeq int64) {
+	// If this buffer is closed, do not allow waiting
+	if b.Closed() {
+		return seq
+	}
+
 	return b.cond.Wait(ctx, seq)
+}
+
+// Closed returns true if the Buffer is closed.
+func (b *Buffer) Closed() bool {
+	b.m.RLock()
+	defer b.m.RUnlock()
+	return b.closed
 }
 
 // Close implements io.Closer.
