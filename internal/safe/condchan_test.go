@@ -90,7 +90,8 @@ func benchmarkCond(b *testing.B, waiters int) {
 	c := NewCond()
 	done := make(chan bool, waiters)
 
-	var idVal atomic.Int32
+	idVal := 0
+	mu := sync.Mutex{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer func() {
@@ -104,24 +105,32 @@ func benchmarkCond(b *testing.B, waiters int) {
 	}()
 
 	for routine := 0; routine < waiters+1; routine++ {
-		go func(r int) {
+		go func() {
 			seq := int64(0)
-			for i := 0; i < 1; i++ {
-				if id := idVal.Load(); id == -1 {
+			for i := 0; i < b.N; i++ {
+				mu.Lock()
+				if id := idVal; id == -1 {
+					mu.Unlock()
 					break
 				}
-				idVal.Add(1)
-				if id := idVal.Load(); int(id) == waiters+1 {
-					idVal.Store(0)
+				idVal++
+				id := idVal
+
+				if id == waiters+1 {
+					idVal = 0
+					mu.Unlock()
 					c.Broadcast()
 				} else {
+					mu.Unlock()
 					seq = c.Wait(ctx, seq)
 				}
 			}
-			idVal.Store(-1)
+			mu.Lock()
+			idVal = -1
+			mu.Unlock()
 			c.Broadcast()
 			done <- true
-		}(routine)
+		}()
 	}
 	for routine := 0; routine < waiters+1; routine++ {
 		<-done
