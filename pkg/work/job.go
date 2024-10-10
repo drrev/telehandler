@@ -6,13 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// JobState is used to demarcate where a [Job]
+// is in its lifecycle.
 type JobState string
 
 const (
-	Running   JobState = "JOB_STATE_RUNNING"
-	Failed    JobState = "JOB_STATE_FAILED"
+	// The job is currently running and active.
+	Running JobState = "JOB_STATE_RUNNING"
+	// The job failed during execution.
+	// If a job is in this state, request the job output with TailJobOutput to discern the cause of failure.
+	Failed JobState = "JOB_STATE_FAILED"
+	// The job ran to completion and exited successfully.
 	Completed JobState = "JOB_STATE_COMPLETED"
-	Stopped   JobState = "JOB_STATE_STOPPED"
+	// The job was stopped by a user before completing execution.
+	Stopped JobState = "JOB_STATE_STOPPED"
 )
 
 // Job represents a command context.
