@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
@@ -14,18 +13,6 @@ import (
 type cnctxkey struct{}
 
 var cnkey = cnctxkey{}
-
-// wrappedStream is a simple wrapper that allows setting custom context
-// on grpc.ServerStream objects.
-type wrappedStream struct {
-	grpc.ServerStream
-	ctx context.Context
-}
-
-// Context returns the custom context instead of the wrapped grpc.StreamServer context.
-func (w *wrappedStream) Context() context.Context {
-	return w.ctx
-}
 
 // resolveCommonNames uses the gRPC request context to resolve the peer's certificates
 // then resolves all non-empty Common Names. Returns a gRPC status error if no non-empty subject CNs were found.
