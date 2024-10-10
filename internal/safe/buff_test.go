@@ -3,7 +3,6 @@ package safe
 import (
 	"bytes"
 	"context"
-	"io"
 	"math/rand/v2"
 	"slices"
 	"sync"
@@ -75,7 +74,7 @@ func TestBuffer(t *testing.T) {
 			defer cancel()
 			defer wg.Done()
 			b.Wait(ctx, 1)
-			readAndCompare(io.EOF)
+			readAndCompare(nil)
 		}(wg)
 	}
 
