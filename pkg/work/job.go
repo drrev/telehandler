@@ -27,6 +27,8 @@ type Job struct {
 	ExitCode  int
 }
 
+// NewJob creates a [Job] with a randomly generated UUID and the given
+// owner, cmd, and args.
 func NewJob(owner string, cmd string, args []string) *Job {
 	return &Job{
 		ID:    uuid.New(),
@@ -36,14 +38,18 @@ func NewJob(owner string, cmd string, args []string) *Job {
 	}
 }
 
+// Identity returns the unique [Job] identifier.
 func (j *Job) Identity() uuid.UUID {
 	return j.ID
 }
 
+// Parent returns the owner of the [Job].
 func (j *Job) Parent() string {
 	return j.Owner
 }
 
+// Running is a convenience function to check
+// if the [Job] is [Running].
 func (j *Job) Running() bool {
 	return j.State == Running
 }
