@@ -9,6 +9,10 @@ import (
 
 var _ io.Reader = (*OutputReader)(nil)
 
+// OutputReader implements [io.Reader] for a [Job].
+//
+// This OutputReader presents STDIO/STDERR in a single
+// reader.
 type OutputReader struct {
 	// seq is the current sync.CondChan sequence number
 	seq int64
@@ -31,6 +35,10 @@ func newOutputReader(ctx context.Context, out *safe.Buffer) *OutputReader {
 
 // Read implements io.Reader.
 // If the underlying reader is closed, io.EOF is returned.
+//
+// All jobs have STDIO and STDERR muxed into a single stream;
+// therefore, a read from this reader will return all
+// interpersed output data.
 func (o *OutputReader) Read(p []byte) (n int, err error) {
 	if o.off >= o.max {
 		o.seq = o.out.Wait(o.ctx, o.seq)
