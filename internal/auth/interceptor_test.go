@@ -41,24 +41,24 @@ func TestServerStreamInterceptor(t *testing.T) {
 	}{
 		{
 			name:    "invalid Context",
-			args:    args{ss: &mockServerStream{ctx: context.TODO()}},
+			args:    args{ss: &mockServerStream{ctx: context.Background()}},
 			wantErr: true,
 		},
 		{
 			name:    "invalid AuthInfo",
-			args:    args{ss: &mockServerStream{ctx: peer.NewContext(context.TODO(), &peer.Peer{AuthInfo: nil})}},
+			args:    args{ss: &mockServerStream{ctx: peer.NewContext(context.Background(), &peer.Peer{AuthInfo: nil})}},
 			wantErr: true,
 		},
 		{
 			name:    "empty CNs",
-			args:    args{ss: &mockServerStream{ctx: peer.NewContext(context.TODO(), &peer.Peer{AuthInfo: credentials.TLSInfo{State: tls.ConnectionState{}}})}},
+			args:    args{ss: &mockServerStream{ctx: peer.NewContext(context.Background(), &peer.Peer{AuthInfo: credentials.TLSInfo{State: tls.ConnectionState{}}})}},
 			wantErr: true,
 		},
 		{
 			name: "admin CN",
 			args: args{
 				handler: mockHandler([]string{"admin"}),
-				ss: &mockServerStream{ctx: peer.NewContext(context.TODO(), &peer.Peer{
+				ss: &mockServerStream{ctx: peer.NewContext(context.Background(), &peer.Peer{
 					AuthInfo: credentials.TLSInfo{
 						State: tls.ConnectionState{
 							PeerCertificates: []*x509.Certificate{
@@ -74,7 +74,7 @@ func TestServerStreamInterceptor(t *testing.T) {
 			name: "multiple CNs",
 			args: args{
 				handler: mockHandler([]string{"admin", "test"}),
-				ss: &mockServerStream{ctx: peer.NewContext(context.TODO(), &peer.Peer{
+				ss: &mockServerStream{ctx: peer.NewContext(context.Background(), &peer.Peer{
 					AuthInfo: credentials.TLSInfo{
 						State: tls.ConnectionState{
 							PeerCertificates: []*x509.Certificate{

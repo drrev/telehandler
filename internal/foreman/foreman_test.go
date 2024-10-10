@@ -12,7 +12,7 @@ import (
 )
 
 func TestService_resolveJob(t *testing.T) {
-	ctx := auth.CommonNamesToCtx(context.TODO(), []string{"test-user"})
+	ctx := auth.CommonNamesToCtx(context.Background(), []string{"test-user"})
 	job := work.NewJob("test-user", "", []string{})
 
 	type args struct {
@@ -29,7 +29,7 @@ func TestService_resolveJob(t *testing.T) {
 		{
 			name:    "empty ctx",
 			exe:     nil,
-			args:    args{ctx: context.TODO(), jobID: ""},
+			args:    args{ctx: context.Background(), jobID: ""},
 			want:    nil,
 			wantErr: true,
 		},
