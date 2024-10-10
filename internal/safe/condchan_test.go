@@ -4,7 +4,7 @@ package safe
 
 import (
 	"context"
-	"sync/atomic"
+	"sync"
 	"testing"
 	"time"
 )
