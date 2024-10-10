@@ -168,17 +168,18 @@ func (s *Service) resolveJob(ctx context.Context, jobID string) (job work.Job, e
 		return
 	}
 
-	job, e = s.exe.Find(id)
+	found, e := s.exe.Find(id)
 	if e != nil {
 		err = status.Errorf(codes.NotFound, "no job found for id '%v'", jobID)
 		return
 	}
 
 	// 2. Validate that the requester is admin or the user that created the job
-	if e := auth.ValidateAccess(&job, names); e != nil {
-		slog.Info("Denied access", slog.Any("names", names), slog.Any("job", job))
+	if e := auth.ValidateAccess(&found, names); e != nil {
+		slog.Info("Denied access", slog.Any("names", names), slog.Any("job", found))
 		err = status.Error(codes.PermissionDenied, "")
+		return
 	}
 
-	return
+	return found, nil
 }
