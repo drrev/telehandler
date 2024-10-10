@@ -17,14 +17,22 @@ const (
 
 // Job represents a command context.
 type Job struct {
-	ID        uuid.UUID
-	Owner     string
-	Cmd       string
-	Args      []string
+	ID uuid.UUID
+	// Owner that created this Job.
+	Owner string
+	// Cmd path to an executable to run for this Job.
+	Cmd string
+	// Args passed to the subprocess.
+	Args []string
+	// StartTime of when the subprocess began execution.
 	StartTime time.Time
-	EndTime   time.Time
-	State     JobState
-	ExitCode  int
+	// EndTime is the time that the job terminated.
+	// This field is only valid if State != Running.
+	EndTime time.Time
+	State   JobState
+	// ExitCode captures the exit_code of the subprocess.
+	// This field is only valid if State != Running.
+	ExitCode int
 }
 
 // NewJob creates a [Job] with a randomly generated UUID and the given
