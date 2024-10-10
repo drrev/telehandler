@@ -2,6 +2,7 @@ package foreman
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
@@ -77,7 +78,7 @@ func (s *Service) StopJob(ctx context.Context, req *foremanpb.StopJobRequest) (*
 
 	if err := s.exe.Stop(job.ID); err != nil {
 		slog.ErrorContext(ctx, "Failed to stop job", slog.String("id", job.ID.String()))
-		return nil, status.Error(codes.Internal, "")
+		return nil, status.Error(codes.Internal, fmt.Errorf("failed to stop job: %w", err).Error())
 	}
 
 	return &emptypb.Empty{}, nil
