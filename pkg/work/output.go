@@ -46,7 +46,7 @@ func (o *OutputReader) Read(ctx context.Context, p []byte) (n int, err error) {
 		o.max = int64(o.out.Len())
 	}
 
-	n, err = o.out.ReadAt(p, o.off)
+	n, err = o.out.CopyAt(p, o.off)
 	o.off += int64(n)
 
 	return
