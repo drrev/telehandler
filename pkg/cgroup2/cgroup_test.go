@@ -25,4 +25,8 @@ func Test_createGroup(t *testing.T) {
 	if err := createGroup(tmp); err == nil {
 		t.Errorf("createGroup() should error if required controllers are missing")
 	}
+
+	if err := createGroup(filepath.Join(tmp, "empty")); err == nil {
+		t.Errorf("createGroup() should error if required controllers are missing")
+	}
 }

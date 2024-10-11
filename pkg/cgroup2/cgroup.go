@@ -23,6 +23,12 @@ var constraints = []Constraint{
 // Create a new cgroup v2 at the given base path.
 // CPU, memory, and IO constraints are automatically added.
 func Create(basePath string) (err error) {
+	defer func() {
+		if err != nil {
+			os.Remove(basePath)
+		}
+	}()
+
 	if err = createGroup(basePath); err != nil {
 		return
 	}
@@ -84,11 +90,6 @@ func createGroup(path string) (err error) {
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		return fmt.Errorf("failed to create cgroup path: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			os.Remove(path)
-		}
-	}()
 
 	// check for any missing controllers
 	raw, err := os.ReadFile(filepath.Join(path, "cgroup.controllers"))
