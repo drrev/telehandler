@@ -30,7 +30,6 @@ type OutputReader struct {
 func newOutputReader(out *safe.Buffer) *OutputReader {
 	return &OutputReader{
 		out: out,
-		max: int64(out.Len()),
 	}
 }
 
