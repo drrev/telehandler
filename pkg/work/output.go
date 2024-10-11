@@ -7,10 +7,6 @@ import (
 	"github.com/drrev/telehandler/internal/safe"
 )
 
-// ErrTooEarly is a retryable error when the underlying buffer has no more data, but
-// more data may be available in the future.
-var ErrTooEarly = safe.ErrTooEarly
-
 // OutputReader implements [io.Reader] for a [Job].
 //
 // This OutputReader presents STDIO/STDERR in a single

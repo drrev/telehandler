@@ -2,14 +2,9 @@ package safe
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"sync"
 )
-
-// ErrTooEarly is a retryable error when the underlying buffer has no more data, but
-// more data may be available in the future.
-var ErrTooEarly = fmt.Errorf("read occurred too early, data is not ready yet")
 
 // A Buffer is a variable-sized Buffer of bytes with [Buffer.Read] and [Buffer.Write] methods.
 // The zero value MUST NEVER be used--use [NewBuffer].
