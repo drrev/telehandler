@@ -27,7 +27,7 @@ func TestBuffer(t *testing.T) {
 
 	readAndCompare := func(wantErr error) {
 		data := make([]byte, 4096)
-		if got, err := b.ReadAt(data, 0); got != 4096 {
+		if got, err := b.CopyAt(data, 0); got != 4096 {
 			t.Errorf("Buffer.ReadAt() = %v, want %v", got, 4096)
 		} else if wantErr != err {
 			t.Errorf("Buffer.ReadAt() error = %v, wantErr %v", err, wantErr)

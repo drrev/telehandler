@@ -38,17 +38,17 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
-// ReadAt reads len(p) bytes into p starting at offset off in the underlying input source.
+// CopyAt reads len(p) bytes into p starting at offset off in the underlying input source.
 // It returns the number of bytes read (0 <= n <= len(p)) and any error encountered.
 //
-// When ReadAt returns n < len(p), it returns a non-nil error explaining why more bytes were not returned.
+// When CopyAt returns n < len(p), it returns a non-nil error explaining why more bytes were not returned.
 // [ErrTooEarly] is returned if reads should be retried.
 // [io.EOF] is returned if the reader will not receive any more data.
 //
-// Even if ReadAt returns n < len(p), it may use all of p as scratch space during the call.
+// Even if CopyAt returns n < len(p), it may use all of p as scratch space during the call.
 //
-// Clients of ReadAt can execute parallel ReadAt calls on the same input source.
-func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
+// Clients of CopyAt can execute parallel CopyAt calls on the same input source.
+func (b *Buffer) CopyAt(p []byte, off int64) (n int, err error) {
 	b.m.RLock()
 	defer b.m.RUnlock()
 	if off >= int64(b.buf.Len()) {
