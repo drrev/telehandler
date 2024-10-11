@@ -2,12 +2,10 @@ package safe
 
 import (
 	"bytes"
-	"context"
 	"math/rand/v2"
 	"slices"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestBuffer(t *testing.T) {
@@ -15,10 +13,11 @@ func TestBuffer(t *testing.T) {
 	N := 200
 
 	chacha := rand.NewChaCha8([32]byte{})
+	m := &sync.RWMutex{}
 	b := &Buffer{
-		cond:   NewCond(),
+		cond:   sync.NewCond(m),
 		buf:    bytes.NewBuffer(make([]byte, 0, 4096)),
-		m:      &sync.RWMutex{},
+		m:      m,
 		closed: false,
 	}
 
@@ -27,7 +26,7 @@ func TestBuffer(t *testing.T) {
 
 	readAndCompare := func(wantErr error) {
 		data := make([]byte, 4096)
-		if got, err := b.CopyAt(data, 0); got != 4096 {
+		if got, err := b.ReadAt(data, 0); got != 4096 {
 			t.Errorf("Buffer.ReadAt() = %v, want %v", got, 4096)
 		} else if wantErr != err {
 			t.Errorf("Buffer.ReadAt() error = %v, wantErr %v", err, wantErr)
@@ -44,10 +43,7 @@ func TestBuffer(t *testing.T) {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			// Buffer.Wait(), Buffer.ReadAt(), Buffer.Write()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
 			defer wg.Done()
-			b.Wait(ctx, 0)
 			readAndCompare(nil)
 		}(wg)
 	}
@@ -70,10 +66,7 @@ func TestBuffer(t *testing.T) {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			// Buffer.Wait(), Buffer.Close()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
 			defer wg.Done()
-			b.Wait(ctx, 1)
 			readAndCompare(nil)
 		}(wg)
 	}

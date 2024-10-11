@@ -1,7 +1,6 @@
 package work
 
 import (
-	"context"
 	"math/rand/v2"
 	"testing"
 
@@ -50,7 +49,6 @@ func TestOutputReader_Read(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	data := make([]byte, 4096)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -60,7 +58,7 @@ func TestOutputReader_Read(t *testing.T) {
 				max: tt.fields.max,
 				out: tt.fields.out,
 			}
-			gotN, err := o.Read(ctx, data)
+			gotN, err := o.Read(data)
 			if !tt.wantErr(err) {
 				t.Errorf("OutputReader.Read() error = %v", err)
 				return

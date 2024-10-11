@@ -2,7 +2,6 @@ package foreman
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
@@ -93,20 +92,25 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		return status.Errorf(codes.Internal, "failed to open job output: %v", err)
 	}
 
+	go func() {
+		<-ctx.Done()
+		r.Close()
+	}()
+
 	buf := make([]byte, 4096)
 	// drain buffer
 	for {
-		n, err := r.Read(ctx, buf)
+		n, err := r.Read(buf)
 
 		// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
 		if n > 0 {
 			e := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
 			if e != nil {
-				return err
+				return e
 			}
 		}
 
-		if err != nil && !errors.Is(err, work.ErrTooEarly) {
+		if err != nil {
 			return nil
 		}
 	}
