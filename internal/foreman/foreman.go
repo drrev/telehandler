@@ -52,8 +52,6 @@ func (s *Service) StartJob(ctx context.Context, req *foremanpb.StartJobRequest) 
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
-	// if there are multiple names, just pick the first
-	// TODO: which name should this pick? without a resource specifier or indicator in the message itself, there's no way to know
 	job, err := s.exe.Start(*work.NewJob(name, req.GetCommand(), req.GetArgs()))
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to start job", slog.String("cmd", req.GetCommand()), slog.Any("args", req.GetArgs()))
