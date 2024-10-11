@@ -6,6 +6,10 @@ import (
 	"github.com/drrev/telehandler/internal/safe"
 )
 
+// ErrTooEarly is a retryable error when the underlying buffer has no more data, but
+// more data may be available in the future.
+var ErrTooEarly = safe.ErrTooEarly
+
 // OutputReader implements [io.Reader] for a [Job].
 //
 // This OutputReader presents STDIO/STDERR in a single
@@ -35,14 +39,17 @@ func newOutputReader(out *safe.Buffer) *OutputReader {
 // All jobs have STDIO and STDERR muxed into a single stream;
 // therefore, a read from this reader will return all
 // interpersed output data.
-func (o *OutputReader) Read(ctx context.Context, p []byte) (n int, err error) {
+func (o *OutputReader) Read(ctx context.Context, p []byte) (int, error) {
 	if o.off >= o.max {
 		o.seq = o.out.Wait(ctx, o.seq)
 		o.max = int64(o.out.Len())
 	}
 
-	n, err = o.out.ReadAt(p, o.off)
+	n, e := o.out.ReadAt(p, o.off)
+	if e != nil {
+		return n, e
+	}
 	o.off += int64(n)
 
-	return
+	return n, nil
 }

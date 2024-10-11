@@ -2,6 +2,7 @@ package foreman
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
@@ -96,7 +97,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	// drain buffer
 	for {
 		n, err := r.Read(ctx, buf)
-		if err != nil {
+		if err != nil && !errors.Is(err, work.ErrTooEarly) {
 			return nil
 		}
 

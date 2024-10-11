@@ -3,9 +3,14 @@ package safe
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sync"
 )
+
+// ErrTooEarly is a retryable error when the underlying buffer has no more data, but
+// more data may be available in the future.
+var ErrTooEarly = fmt.Errorf("read occurred too early, data is not ready yet")
 
 // A Buffer is a variable-sized buffer of bytes with [Buffer.Read] and [Buffer.Write] methods.
 // The zero value MUST NEVER be used--use [NewBuffer].
@@ -34,6 +39,7 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 }
 
 // ReadAt implements io.ReaderAt.
+// [ErrTooEarly] is returned if n < len(p), but reads should be retried.
 func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 	b.m.RLock()
 	defer b.m.RUnlock()
@@ -42,6 +48,7 @@ func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 			err = io.EOF
 			return
 		}
+		err = ErrTooEarly
 		return
 	}
 
