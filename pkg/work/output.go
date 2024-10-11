@@ -39,6 +39,8 @@ func newOutputReader(out *safe.Buffer) *OutputReader {
 // All jobs have STDIO and STDERR muxed into a single stream;
 // therefore, a read from this reader will return all
 // interpersed output data.
+//
+// [ErrTooEarly] is returned if n < len(p), but reads should be retried.
 func (o *OutputReader) Read(ctx context.Context, p []byte) (int, error) {
 	if o.off >= o.max {
 		o.seq = o.out.Wait(ctx, o.seq)
