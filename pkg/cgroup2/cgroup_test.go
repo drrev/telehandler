@@ -5,12 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/drrev/telehandler/tests/utils"
 )
 
 func Test_createGroup(t *testing.T) {
-	tmp := utils.TempDir(t)
+	tmp := t.TempDir()
 
 	// fake controllers
 	cgPath := filepath.Join(tmp, "cgroup.controllers")
