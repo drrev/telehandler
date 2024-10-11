@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -20,4 +21,14 @@ func ErrorTextContains(t *testing.T, str string) func(e error) bool {
 		}
 		return strings.Contains(e.Error(), str)
 	}
+}
+
+func TempDir(t *testing.T) string {
+	tmp, err := os.MkdirTemp(os.TempDir(), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() { os.RemoveAll(tmp) })
+	return tmp
 }
