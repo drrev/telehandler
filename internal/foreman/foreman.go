@@ -97,18 +97,17 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	// drain buffer
 	for {
 		n, err := r.Read(ctx, buf)
-		if err != nil && !errors.Is(err, work.ErrTooEarly) {
-			return nil
-		}
-
-		if n < 1 {
-			continue
-		}
 
 		// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
-		err = srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
-		if err != nil {
-			return err
+		if n > 0 {
+			e := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
+			if e != nil {
+				return err
+			}
+		}
+
+		if err != nil && !errors.Is(err, work.ErrTooEarly) {
+			return nil
 		}
 	}
 }

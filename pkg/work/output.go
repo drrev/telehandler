@@ -41,17 +41,14 @@ func newOutputReader(out *safe.Buffer) *OutputReader {
 // interpersed output data.
 //
 // [ErrTooEarly] is returned if n < len(p), but reads should be retried.
-func (o *OutputReader) Read(ctx context.Context, p []byte) (int, error) {
+func (o *OutputReader) Read(ctx context.Context, p []byte) (n int, err error) {
 	if o.off >= o.max {
 		o.seq = o.out.Wait(ctx, o.seq)
 		o.max = int64(o.out.Len())
 	}
 
-	n, e := o.out.ReadAt(p, o.off)
-	if e != nil {
-		return n, e
-	}
+	n, err = o.out.ReadAt(p, o.off)
 	o.off += int64(n)
 
-	return n, nil
+	return
 }

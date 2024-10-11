@@ -55,6 +55,15 @@ func (b *Buffer) ReadAt(p []byte, off int64) (n int, err error) {
 	raw := b.buf.Bytes()
 	n = copy(p, raw[off:])
 
+	// ensure error is set if on short read
+	if n < len(p) {
+		if b.closed {
+			err = io.EOF
+		} else {
+			err = ErrTooEarly
+		}
+	}
+
 	return
 }
 
