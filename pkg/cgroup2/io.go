@@ -17,7 +17,8 @@ const (
 // ioConstraints uses the given deviceIter to create a Constraint slice, so that
 // each block device is limited constrained.
 func ioConstraints(deviceIter iter.Seq2[string, error]) ([]Constraint, error) {
-	constraints := []Constraint{}
+	var constraints []Constraint
+
 	if deviceIter == nil {
 		return nil, nil
 	}
