@@ -2,7 +2,6 @@ package foreman
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
@@ -96,7 +95,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	buf := make([]byte, 4096)
 	// drain buffer
 	for {
-		n, err := r.Read(ctx, buf)
+		n, err := r.Read(buf)
 
 		// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
 		if n > 0 {
@@ -106,7 +105,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 			}
 		}
 
-		if err != nil && !errors.Is(err, work.ErrTooEarly) {
+		if err != nil {
 			return nil
 		}
 	}

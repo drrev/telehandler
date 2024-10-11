@@ -1,8 +1,6 @@
 package work
 
 import (
-	"context"
-
 	"github.com/drrev/telehandler/internal/safe"
 )
 
@@ -33,21 +31,9 @@ func newOutputReader(out *safe.Buffer) *OutputReader {
 	}
 }
 
-// If the underlying reader is closed, io.EOF is returned.
-//
-// All jobs have STDIO and STDERR muxed into a single stream;
-// therefore, a read from this reader will return all
-// interpersed output data.
-//
-// [ErrTooEarly] is returned if n < len(p), but reads should be retried.
-func (o *OutputReader) Read(ctx context.Context, p []byte) (n int, err error) {
-	if o.off >= o.max {
-		o.seq = o.out.Wait(ctx, o.seq)
-		o.max = int64(o.out.Len())
-	}
-
-	n, err = o.out.CopyAt(p, o.off)
+// Read implements io.Reader.
+func (o *OutputReader) Read(p []byte) (n int, err error) {
+	n, err = o.out.ReadAt(p, o.off)
 	o.off += int64(n)
-
 	return
 }
