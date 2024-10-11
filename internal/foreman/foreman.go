@@ -47,15 +47,13 @@ func (s *Service) GetJobStatus(ctx context.Context, req *foremanpb.GetJobStatusR
 
 // StartJob implements foremanpb.ForemanServiceServer.
 func (s *Service) StartJob(ctx context.Context, req *foremanpb.StartJobRequest) (*foremanpb.JobResponse, error) {
-	names, err := auth.CommonNamesFromCtx(ctx)
+	name, err := auth.CommonNameFromCtx(ctx)
 	if err != nil {
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
 	// if there are multiple names, just pick the first
 	// TODO: which name should this pick? without a resource specifier or indicator in the message itself, there's no way to know
-	name := names[0]
-
 	job, err := s.exe.Start(*work.NewJob(name, req.GetCommand(), req.GetArgs()))
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to start job", slog.String("cmd", req.GetCommand()), slog.Any("args", req.GetArgs()))
@@ -130,7 +128,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 // then validate that the resource name is scoped to the requester. If it isn't, reject the request.
 // Then, each of these handlers would only be responsible for fetching the Job from storage.
 func (s *Service) resolveJob(ctx context.Context, jobID string) (job work.Job, err error) {
-	names, err := auth.CommonNamesFromCtx(ctx)
+	name, err := auth.CommonNameFromCtx(ctx)
 	if err != nil {
 		err = status.Error(codes.PermissionDenied, err.Error())
 		return
@@ -150,8 +148,8 @@ func (s *Service) resolveJob(ctx context.Context, jobID string) (job work.Job, e
 	}
 
 	// 2. Validate that the requester is admin or the user that created the job
-	if e := auth.ValidateAccess(&found, names); e != nil {
-		slog.Info("Denied access", slog.Any("names", names), slog.Any("job", found))
+	if e := auth.ValidateAccess(&found, name); e != nil {
+		slog.Info("Denied access", slog.Any("name", name), slog.Any("job", found))
 		err = status.Error(codes.PermissionDenied, "")
 		return
 	}

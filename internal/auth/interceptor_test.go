@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"slices"
 	"strings"
 	"testing"
 
@@ -27,7 +26,7 @@ func TestTap(t *testing.T) {
 	tests := []struct {
 		name    string
 		ctx     context.Context
-		names   []string
+		cn      string
 		wantErr func(e error) bool
 	}{
 		{
@@ -56,7 +55,7 @@ func TestTap(t *testing.T) {
 					},
 				},
 			}),
-			names:   []string{"admin"},
+			cn:      "admin",
 			wantErr: noError,
 		},
 		{
@@ -65,13 +64,13 @@ func TestTap(t *testing.T) {
 				AuthInfo: credentials.TLSInfo{
 					State: tls.ConnectionState{
 						PeerCertificates: []*x509.Certificate{
-							{Subject: pkix.Name{CommonName: "admin"}},
 							{Subject: pkix.Name{CommonName: "test"}},
+							{Subject: pkix.Name{CommonName: "admin"}},
 						},
 					},
 				},
 			}),
-			names:   []string{"admin", "test"},
+			cn:      "test",
 			wantErr: noError,
 		},
 	}
@@ -82,14 +81,14 @@ func TestTap(t *testing.T) {
 				t.Errorf("ServerStreamInterceptor() error = %v", err)
 			}
 
-			if len(tt.names) > 0 {
-				names, err := CommonNamesFromCtx(ctx)
+			if len(tt.name) > 0 {
+				name, err := CommonNameFromCtx(ctx)
 				if err != nil {
-					t.Errorf("CommonNamesFromCtx() error = %v", err)
+					t.Errorf("CommonNameFromCtx() error = %v", err)
 				}
 
-				if slices.Compare(names, tt.names) != 0 {
-					t.Errorf("CommonNamesFromCtx() got %v, expected %v", names, tt.names)
+				if name != tt.name {
+					t.Errorf("CommonNameFromCtx() got %v, expected %v", name, tt.name)
 				}
 			}
 		})

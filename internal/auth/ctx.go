@@ -14,52 +14,54 @@ type cnctxkey struct{}
 
 var cnkey = cnctxkey{}
 
-// resolveCommonNames uses the gRPC request context to resolve the peer's certificates
+// resolveCommonName uses the gRPC request context to resolve the peer's certificates
 // then resolves all non-empty Common Names. Returns a gRPC status error if no non-empty subject CNs were found.
-func resolveCommonNames(ctx context.Context) ([]string, error) {
+func resolveCommonName(ctx context.Context) (cn string, err error) {
 	// auth mTLS cert
 	peer, ok := peer.FromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "failed resolve peer")
+		err = status.Error(codes.Unauthenticated, "failed resolve peer")
+		return
 	}
 
 	mtls, ok := peer.AuthInfo.(credentials.TLSInfo)
 	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid peer authentication")
+		err = status.Errorf(codes.Unauthenticated, "invalid peer authentication")
+		return
 	}
 
-	// pull out all common names
-	names := []string{}
-	for _, item := range mtls.State.PeerCertificates {
-		if len(item.Subject.CommonName) > 0 {
-			names = append(names, item.Subject.CommonName)
-		}
+	// this should be impossible, but bounds checking nonetheless
+	if len(mtls.State.PeerCertificates) < 1 {
+		err = status.Errorf(codes.Unauthenticated, "no certificates found")
+		return
 	}
 
-	if len(names) < 1 {
-		return nil, status.Error(codes.Unauthenticated, "no valid subject CN found")
+	cn = mtls.State.PeerCertificates[0].Subject.CommonName
+
+	if len(cn) < 1 {
+		err = status.Error(codes.Unauthenticated, "no valid subject CN found")
 	}
 
-	return names, nil
+	return
 }
 
-// CommonNamesToCtx adds cns to the given context.
-// Use [CommonNamesFromCtx] to get cns out of the context.
-func CommonNamesToCtx(ctx context.Context, cns []string) context.Context {
-	return context.WithValue(ctx, cnkey, cns)
+// CommonNameToCtx adds cns to the given context.
+// Use [CommonNameFromCtx] to get cns out of the context.
+func CommonNameToCtx(ctx context.Context, cn string) context.Context {
+	return context.WithValue(ctx, cnkey, cn)
 }
 
-// CommonNamesFromCtx retrieves any Subject Common Names stored in the given context.
+// CommonNameFromCtx retrieves any Subject Common Names stored in the given context.
 // If none are found, an error is returned.
-func CommonNamesFromCtx(ctx context.Context) ([]string, error) {
+func CommonNameFromCtx(ctx context.Context) (string, error) {
 	v := ctx.Value(cnkey)
 	if v == nil {
-		return nil, fmt.Errorf("missing CommonName")
+		return "", fmt.Errorf("missing CommonName")
 	}
 
-	cns, ok := v.([]string)
+	cns, ok := v.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid CommonName type: '%T'", v)
+		return "", fmt.Errorf("invalid CommonName type: '%T'", v)
 	}
 
 	return cns, nil

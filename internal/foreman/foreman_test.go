@@ -13,7 +13,7 @@ import (
 )
 
 func TestService_resolveJob(t *testing.T) {
-	ctx := auth.CommonNamesToCtx(context.Background(), []string{"test-user"})
+	ctx := auth.CommonNameToCtx(context.Background(), "test-user")
 	job := work.NewJob("test-user", "", []string{})
 
 	noError := func(e error) bool { return e == nil }
