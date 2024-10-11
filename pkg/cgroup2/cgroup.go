@@ -43,13 +43,13 @@ func Create(basePath string) (err error) {
 
 	for _, c := range constraints {
 		if err := applyConstraint(basePath, c); err != nil {
-			return fmt.Errorf("failed to apply constraint to file %s: %w", c.file, err)
+			return fmt.Errorf("failed to apply constraint to file %s: %w", c.FileName, err)
 		}
 	}
 
 	for _, c := range blockConstraints {
 		if err := applyConstraint(basePath, c); err != nil {
-			return fmt.Errorf("failed to apply constraint to file %s: %w", c.file, err)
+			return fmt.Errorf("failed to apply constraint to file %s: %w", c.FileName, err)
 		}
 	}
 
@@ -63,7 +63,7 @@ func Cleanup(basePath string) error {
 
 // applyConstraint writes a constraint value to the target based at root.
 func applyConstraint(root string, c Constraint) error {
-	return os.WriteFile(filepath.Join(root, c.file), []byte(c.value), fs.FileMode(0))
+	return os.WriteFile(filepath.Join(root, c.FileName), []byte(c.Value), fs.FileMode(0))
 }
 
 // validateCgroupv2 checks to ensure that only cgroup v2 is in use on the host.
@@ -113,7 +113,12 @@ func createGroup(path string) (err error) {
 	return nil
 }
 
+// Constraint is a simple file/value format for
+// writing a formatted string into a cgroup file
+// to apply limits.
 type Constraint struct {
-	file  string
-	value string
+	// FileName is the cgroup v2 relative file name.
+	FileName string
+	// Value is a preformatted constraint to write to FileName.
+	Value string
 }
