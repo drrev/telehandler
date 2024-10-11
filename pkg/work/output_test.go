@@ -28,24 +28,26 @@ func TestOutputReader_Read(t *testing.T) {
 		seq int64
 		off int64
 		max int64
-		ctx context.Context
 		out *safe.Buffer
 	}
 	tests := []struct {
 		name    string
+		ctx     context.Context
 		fields  fields
 		wantN   int
 		wantErr func(error) bool
 	}{
 		{
 			name:    "closed: no data",
-			fields:  fields{ctx: context.Background(), out: buff(0, true)},
+			ctx:     context.Background(),
+			fields:  fields{out: buff(0, true)},
 			wantN:   0,
 			wantErr: utils.ErrorTextContains(t, "EOF"),
 		},
 		{
 			name:    "closed: backfill",
-			fields:  fields{ctx: context.Background(), max: 45, out: buff(45, true)},
+			ctx:     context.Background(),
+			fields:  fields{max: 45, out: buff(45, true)},
 			wantN:   45,
 			wantErr: utils.NoError(t),
 		},
@@ -58,10 +60,9 @@ func TestOutputReader_Read(t *testing.T) {
 				seq: tt.fields.seq,
 				off: tt.fields.off,
 				max: tt.fields.max,
-				ctx: tt.fields.ctx,
 				out: tt.fields.out,
 			}
-			gotN, err := o.Read(data)
+			gotN, err := o.Read(tt.ctx, data)
 			if !tt.wantErr(err) {
 				t.Errorf("OutputReader.Read() error = %v", err)
 				return

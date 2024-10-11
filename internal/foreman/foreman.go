@@ -2,7 +2,6 @@ package foreman
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
@@ -20,7 +19,7 @@ import (
 type Executor interface {
 	Start(j work.Job) (work.Job, error)
 	Find(id uuid.UUID) (work.Job, error)
-	Output(ctx context.Context, id uuid.UUID) (*work.OutputReader, error)
+	Output(id uuid.UUID) (*work.OutputReader, error)
 	Running(jobID uuid.UUID) (v bool, ok bool)
 	Stop(id uuid.UUID) error
 }
@@ -73,7 +72,7 @@ func (s *Service) StopJob(ctx context.Context, req *foremanpb.StopJobRequest) (*
 
 	if err := s.exe.Stop(job.ID); err != nil {
 		slog.ErrorContext(ctx, "Failed to stop job", slog.String("id", job.ID.String()))
-		return nil, status.Error(codes.Internal, fmt.Errorf("failed to stop job: %w", err).Error())
+		return nil, status.Errorf(codes.Internal, "failed to stop job: %v", err)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -88,17 +87,17 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		return err
 	}
 
-	r, err := s.exe.Output(ctx, job.ID)
+	r, err := s.exe.Output(job.ID)
 	if err != nil {
-		return err
+		return status.Errorf(codes.Internal, "failed to open job output: %v", err)
 	}
 
 	buf := make([]byte, 4096)
 	// drain buffer
 	for {
-		n, err := r.Read(buf)
+		n, err := r.Read(ctx, buf)
 		if err != nil {
-			return err
+			return nil
 		}
 
 		if n < 1 {
