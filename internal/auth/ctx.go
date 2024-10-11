@@ -14,8 +14,8 @@ type cnctxkey struct{}
 
 var cnkey = cnctxkey{}
 
-// resolveCommonName uses the gRPC request context to resolve the peer's certificates
-// then resolves all non-empty Common Names. Returns a gRPC status error if no non-empty subject CNs were found.
+// resolveCommonName uses the gRPC request context to resolve the peer's Common Name.
+// Returns a gRPC status error if no subject CN was found.
 func resolveCommonName(ctx context.Context) (cn string, err error) {
 	// auth mTLS cert
 	peer, ok := peer.FromContext(ctx)
@@ -45,14 +45,14 @@ func resolveCommonName(ctx context.Context) (cn string, err error) {
 	return
 }
 
-// CommonNameToCtx adds cns to the given context.
-// Use [CommonNameFromCtx] to get cns out of the context.
+// CommonNameToCtx adds a CN to the given context.
+// Use [CommonNameFromCtx] to get the CN out of the context.
 func CommonNameToCtx(ctx context.Context, cn string) context.Context {
 	return context.WithValue(ctx, cnkey, cn)
 }
 
-// CommonNameFromCtx retrieves any Subject Common Names stored in the given context.
-// If none are found, an error is returned.
+// CommonNameFromCtx retrieves any CN stored in the given context.
+// If one is not found, an error is returned.
 func CommonNameFromCtx(ctx context.Context) (string, error) {
 	v := ctx.Value(cnkey)
 	if v == nil {
