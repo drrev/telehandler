@@ -92,6 +92,11 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		return status.Errorf(codes.Internal, "failed to open job output: %v", err)
 	}
 
+	go func() {
+		<-ctx.Done()
+		r.Close()
+	}()
+
 	buf := make([]byte, 4096)
 	// drain buffer
 	for {
@@ -101,7 +106,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		if n > 0 {
 			e := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
 			if e != nil {
-				return err
+				return e
 			}
 		}
 

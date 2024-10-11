@@ -80,6 +80,11 @@ func (b *Buffer) Close() error {
 	return nil
 }
 
+// Wake forces a broadcast to wake up all Readers.
+func (b *Buffer) Wake() {
+	b.cond.Broadcast()
+}
+
 // NewBuffer creates and initializes a new [Buffer] using buf as its
 // initial contents. The new [Buffer] takes ownership of buf, and the
 // caller should not use buf after this call. NewBuffer is intended to

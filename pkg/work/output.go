@@ -1,6 +1,9 @@
 package work
 
 import (
+	"io"
+	"sync/atomic"
+
 	"github.com/drrev/telehandler/internal/safe"
 )
 
@@ -21,7 +24,8 @@ type OutputReader struct {
 	max int64
 	// ctx is copied as a field to catch ctx.Done()
 	// ctx is not used for any other reason
-	out *safe.Buffer
+	out    *safe.Buffer
+	closed atomic.Bool
 }
 
 // newOutputReader wraps [safe.Buffer] to implement [io.Reader].
@@ -33,7 +37,20 @@ func newOutputReader(out *safe.Buffer) *OutputReader {
 
 // Read implements io.Reader.
 func (o *OutputReader) Read(p []byte) (n int, err error) {
+	if o.closed.Load() {
+		err = io.EOF
+		return
+	}
+
 	n, err = o.out.ReadAt(p, o.off)
 	o.off += int64(n)
 	return
+}
+
+// Close implements io.Closer.
+// This wakes any current `Read`.
+func (o *OutputReader) Close() error {
+	o.closed.Store(true)
+	o.out.Wake()
+	return nil
 }
