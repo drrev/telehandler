@@ -42,7 +42,7 @@ func TestTap(t *testing.T) {
 		{
 			name:    "empty CNs",
 			ctx:     peer.NewContext(context.Background(), &peer.Peer{AuthInfo: credentials.TLSInfo{State: tls.ConnectionState{}}}),
-			wantErr: errorTextContains("no valid subject CN found"),
+			wantErr: errorTextContains("Unauthenticated"),
 		},
 		{
 			name: "admin CN",
@@ -81,14 +81,14 @@ func TestTap(t *testing.T) {
 				t.Errorf("ServerStreamInterceptor() error = %v", err)
 			}
 
-			if len(tt.name) > 0 {
+			if len(tt.cn) > 0 {
 				name, err := CommonNameFromCtx(ctx)
 				if err != nil {
 					t.Errorf("CommonNameFromCtx() error = %v", err)
 				}
 
-				if name != tt.name {
-					t.Errorf("CommonNameFromCtx() got %v, expected %v", name, tt.name)
+				if name != tt.cn {
+					t.Errorf("CommonNameFromCtx() got %v, expected %v", name, tt.cn)
 				}
 			}
 		})
