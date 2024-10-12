@@ -11,14 +11,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var requiredControllers = []string{"cpu", "memory", "io"}
+var (
+	requiredControllers = []string{"cpu", "memory", "io"}
 
-var constraints = []Constraint{
-	{"cpu.max", "100000 1000000"},
-	{"memory.max", "512M"},
-	{"memory.high", "384M"},
-	{"memory.swap.max", "0"},
-}
+	constraints = []Constraint{
+		{"cpu.max", "100000 1000000"},
+		{"memory.max", "512M"},
+		{"memory.high", "384M"},
+		{"memory.swap.max", "0"},
+	}
+)
 
 // Create a new cgroup v2 at the given base path.
 // CPU, memory, and IO constraints are automatically added.
@@ -37,6 +39,16 @@ func Create(basePath string) (err error) {
 		return
 	}
 
+	return applyAllConstraints(basePath)
+}
+
+// Cleanup removes the cgroup created at the given basePath.
+func Cleanup(basePath string) error {
+	return os.Remove(basePath)
+}
+
+// applyAllConstraints applies constraints for cpu, memory, and io.
+func applyAllConstraints(root string) error {
 	blockDeviceIter, err := blockDevices()
 	if err != nil {
 		return err
@@ -48,23 +60,18 @@ func Create(basePath string) (err error) {
 	}
 
 	for _, c := range constraints {
-		if err := applyConstraint(basePath, c); err != nil {
+		if err := applyConstraint(root, c); err != nil {
 			return fmt.Errorf("failed to apply constraint to file %s: %w", c.FileName, err)
 		}
 	}
 
 	for _, c := range blockConstraints {
-		if err := applyConstraint(basePath, c); err != nil {
+		if err := applyConstraint(root, c); err != nil {
 			return fmt.Errorf("failed to apply constraint to file %s: %w", c.FileName, err)
 		}
 	}
 
-	return
-}
-
-// Cleanup removes the cgroup created at the given basePath.
-func Cleanup(basePath string) error {
-	return os.Remove(basePath)
+	return nil
 }
 
 // applyConstraint writes a constraint value to the target based at root.

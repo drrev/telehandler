@@ -5,6 +5,7 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -12,6 +13,8 @@ const (
 	ioWBpsLimit  = 41943040
 	ioRiopsLimit = 1000
 	ioWiopsLimit = 1000
+
+	ioConstraintFileName = "io.max"
 )
 
 // ioConstraints uses the given deviceIter to create a Constraint slice, so that
@@ -28,7 +31,7 @@ func ioConstraints(deviceIter iter.Seq2[string, error]) ([]Constraint, error) {
 			return nil, err
 		}
 
-		constraints = append(constraints, Constraint{"io.max", ioMajorMinorConstraint(mm)})
+		constraints = append(constraints, Constraint{ioConstraintFileName, ioMajorMinorConstraint(mm)})
 	}
 
 	return constraints, nil
@@ -58,7 +61,7 @@ func blockDevices() (iter.Seq2[string, error], error) {
 	return func(yield func(string, error) bool) {
 		for _, fp := range devFiles {
 			raw, err := os.ReadFile(fp)
-			if !yield(string(raw), err) {
+			if !yield(strings.TrimSpace(string(raw)), err) {
 				return
 			}
 		}
