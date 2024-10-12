@@ -9,6 +9,7 @@ import (
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
 	"github.com/drrev/telehandler/internal/auth"
 	"github.com/drrev/telehandler/internal/codec"
+	"github.com/drrev/telehandler/pkg/safe"
 	"github.com/drrev/telehandler/pkg/work"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ import (
 type Executor interface {
 	Start(j work.Job) (work.Job, error)
 	Find(id uuid.UUID) (work.Job, error)
-	Output(id uuid.UUID) (*work.OutputReader, error)
+	Output(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 	Running(jobID uuid.UUID) (v bool, ok bool)
 	Stop(id uuid.UUID) error
 }
@@ -95,25 +96,27 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	}
 	context.AfterFunc(ctx, func() { r.Close() })
 
-	buf := make([]byte, 4096)
-	// drain buffer
-	for {
-		n, err := r.Read(buf)
+	buf := make([]byte, 3*1024*1024)
 
-		// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
+	// drain buffer
+	for ctx.Err() == nil {
+		n, e := r.Read(buf)
+
 		if n > 0 {
-			if err := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)}); err != nil {
+			if err = srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)}); err != nil {
 				return err
 			}
 		}
 
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+		if e != nil {
+			if errors.Is(e, io.EOF) {
 				return nil
 			}
-			return status.Errorf(codes.Internal, "failed to stream output: %w", err)
+			return status.Errorf(codes.Internal, "failed to stream output: %v", e)
 		}
 	}
+
+	return nil
 }
 
 // resolveJob attempts to provide a semi-generic way to authenticate that the requester has
