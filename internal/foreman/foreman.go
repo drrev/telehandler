@@ -2,11 +2,14 @@ package foreman
 
 import (
 	"context"
+	"errors"
+	"io"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
 	"github.com/drrev/telehandler/internal/auth"
 	"github.com/drrev/telehandler/internal/codec"
+	"github.com/drrev/telehandler/pkg/safe"
 	"github.com/drrev/telehandler/pkg/work"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -19,7 +22,7 @@ import (
 type Executor interface {
 	Start(j work.Job) (work.Job, error)
 	Find(id uuid.UUID) (work.Job, error)
-	Output(id uuid.UUID) (*work.OutputReader, error)
+	Output(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 	Running(jobID uuid.UUID) (v bool, ok bool)
 	Stop(id uuid.UUID) error
 }
@@ -91,29 +94,29 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	if err != nil {
 		return status.Errorf(codes.Internal, "failed to open job output: %v", err)
 	}
+	context.AfterFunc(ctx, func() { r.Close() })
 
-	go func() {
-		<-ctx.Done()
-		r.Close()
-	}()
+	buf := make([]byte, 3*1024*1024)
 
-	buf := make([]byte, 4096)
 	// drain buffer
-	for {
-		n, err := r.Read(buf)
+	for ctx.Err() == nil {
+		n, e := r.Read(buf)
 
-		// TODO: determine if it is worth using a resource pool to prevent unnecessary allocation here
 		if n > 0 {
-			e := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)})
-			if e != nil {
-				return e
+			if err := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)}); err != nil {
+				return err
 			}
 		}
 
-		if err != nil {
-			return nil
+		if e != nil {
+			if errors.Is(e, io.EOF) {
+				return nil
+			}
+			return status.Errorf(codes.Internal, "failed to stream output: %v", e)
 		}
 	}
+
+	return nil
 }
 
 // resolveJob attempts to provide a semi-generic way to authenticate that the requester has
@@ -128,31 +131,28 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 // With resource names, all of this can be handled in an interceptor with protoreflect to get the "name" field,
 // then validate that the resource name is scoped to the requester. If it isn't, reject the request.
 // Then, each of these handlers would only be responsible for fetching the Job from storage.
-func (s *Service) resolveJob(ctx context.Context, jobID string) (job work.Job, err error) {
+func (s *Service) resolveJob(ctx context.Context, jobID string) (work.Job, error) {
+	var job work.Job
 	name, err := auth.CommonNameFromCtx(ctx)
 	if err != nil {
-		err = status.Error(codes.PermissionDenied, err.Error())
-		return
+		return job, status.Error(codes.PermissionDenied, err.Error())
 	}
 
 	// 1. Resolve the job
-	id, e := uuid.Parse(jobID)
-	if e != nil {
-		err = status.Errorf(codes.InvalidArgument, "invalid job id '%v'", jobID)
-		return
+	id, err := uuid.Parse(jobID)
+	if err != nil {
+		return job, status.Errorf(codes.InvalidArgument, "invalid job id '%v'", jobID)
 	}
 
-	found, e := s.exe.Find(id)
-	if e != nil {
-		err = status.Errorf(codes.NotFound, "no job found for id '%v'", jobID)
-		return
+	found, err := s.exe.Find(id)
+	if err != nil {
+		return job, status.Errorf(codes.NotFound, "no job found for id '%v'", jobID)
 	}
 
 	// 2. Validate that the requester is admin or the user that created the job
-	if e := auth.ValidateAccess(&found, name); e != nil {
+	if err := auth.ValidateAccess(&found, name); err != nil {
 		slog.Info("Denied access", slog.Any("name", name), slog.Any("job", found))
-		err = status.Error(codes.PermissionDenied, "")
-		return
+		return job, status.Error(codes.PermissionDenied, "")
 	}
 
 	return found, nil

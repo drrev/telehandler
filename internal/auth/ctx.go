@@ -14,45 +14,42 @@ type cnctxkey struct{}
 
 var cnkey = cnctxkey{}
 
-// resolveCommonName uses the gRPC request context to resolve the peer's certificates
-// then resolves all non-empty Common Names. Returns a gRPC status error if no non-empty subject CNs were found.
-func resolveCommonName(ctx context.Context) (cn string, err error) {
+// resolveCommonName uses the gRPC request context to resolve the peer's Common Name.
+// Returns a gRPC status error if no subject CN was found.
+func resolveCommonName(ctx context.Context) (string, error) {
 	// auth mTLS cert
 	peer, ok := peer.FromContext(ctx)
 	if !ok {
-		err = status.Error(codes.Unauthenticated, "failed resolve peer")
-		return
+		return "", status.Error(codes.Unauthenticated, "failed resolve peer")
 	}
 
 	mtls, ok := peer.AuthInfo.(credentials.TLSInfo)
 	if !ok {
-		err = status.Errorf(codes.Unauthenticated, "invalid peer authentication")
-		return
+		return "", status.Errorf(codes.Unauthenticated, "invalid peer authentication")
 	}
 
 	// this should be impossible, but bounds checking nonetheless
 	if len(mtls.State.PeerCertificates) < 1 {
-		err = status.Errorf(codes.Unauthenticated, "no certificates found")
-		return
+		return "", status.Errorf(codes.Unauthenticated, "no certificates found")
 	}
 
-	cn = mtls.State.PeerCertificates[0].Subject.CommonName
+	cn := mtls.State.PeerCertificates[0].Subject.CommonName
 
 	if len(cn) < 1 {
-		err = status.Error(codes.Unauthenticated, "no valid subject CN found")
+		return cn, status.Error(codes.Unauthenticated, "no valid subject CN found")
 	}
 
-	return
+	return cn, nil
 }
 
-// CommonNameToCtx adds cns to the given context.
-// Use [CommonNameFromCtx] to get cns out of the context.
+// CommonNameToCtx adds a CN to the given context.
+// Use [CommonNameFromCtx] to get the CN out of the context.
 func CommonNameToCtx(ctx context.Context, cn string) context.Context {
 	return context.WithValue(ctx, cnkey, cn)
 }
 
-// CommonNameFromCtx retrieves any Subject Common Names stored in the given context.
-// If none are found, an error is returned.
+// CommonNameFromCtx retrieves any CN stored in the given context.
+// If one is not found, an error is returned.
 func CommonNameFromCtx(ctx context.Context) (string, error) {
 	v := ctx.Value(cnkey)
 	if v == nil {
