@@ -17,6 +17,8 @@ var ErrClosedWriter = errors.New("io: write on closed writer")
 //
 // The buffer can be read by any number of readers by requesting a reader instance
 // with [NotifyingBuffer.Reader].
+//
+// See [NewNotifyingBuffer].
 type NotifyingBuffer struct {
 	closed bool
 	mu     sync.RWMutex
@@ -24,6 +26,8 @@ type NotifyingBuffer struct {
 	notify chan struct{}
 }
 
+// NewNotifyingBuffer creates a [NotifyingBuffer] that is initialized
+// and ready to use.
 func NewNotifyingBuffer() *NotifyingBuffer {
 	return &NotifyingBuffer{
 		closed: false,
