@@ -103,7 +103,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		n, e := r.Read(buf)
 
 		if n > 0 {
-			if err = srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)}); err != nil {
+			if err := srv.Send(&foremanpb.JobOutput{Data: append([]byte{}, buf[:n]...)}); err != nil {
 				return err
 			}
 		}
