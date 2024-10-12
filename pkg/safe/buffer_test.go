@@ -41,11 +41,11 @@ func TestCloseAndWait(t *testing.T) {
 	data := []byte("Hello, World!")
 	_, err := nb.Write(data)
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("NotifyingBuffer.Write() unexpected error: %v", err)
 	}
 	err = nb.Close()
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("NotifyingBuffer.Close() unexpected error: %v", err)
 	}
 	// Check if notify channel is closed (which means the writer is closed)
 	<-nb.Wait()
@@ -56,7 +56,7 @@ func TestReader(t *testing.T) {
 	data := []byte("Hello, World!")
 	_, err := nb.Write(data)
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("NotifyingBuffer.Write() unexpected error: %v", err)
 	}
 
 	r := nb.Reader()
@@ -115,10 +115,10 @@ func TestConcurrentWriteAndRead(t *testing.T) {
 	buf := make([]byte, len(data1)+len(data2))
 	n, err := r.Read(buf)
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("NotifyingBufferReader.Read(): %v", err)
 	}
 	if n != len(data1)+len(data2) {
-		t.Errorf("Expected to read %d bytes, but read %d", len(data1)+len(data2), n)
+		t.Errorf("NotifyingBufferReader.Read() expected to read %d bytes, but read %d", len(data1)+len(data2), n)
 	}
 
 	if data := buf[:len(data1)]; !slices.Equal(data1, data) {
@@ -142,12 +142,12 @@ func TestCloseWhileReading(t *testing.T) {
 
 	err := nb.Close()
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("NotifyingBuffer.Close() unexpected error: %v", err)
 	}
 
 	err = <-errCh
 	if err != io.EOF {
-		t.Errorf("Expected EOF but got %v", err)
+		t.Errorf("NotifyingBufferReader.Read() expected EOF but got %v", err)
 	}
 }
 
@@ -172,7 +172,7 @@ func TestMultipleReaders(t *testing.T) {
 
 	_, err = r2.Read(buf2)
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("NotifyingBufferReader.Read() unexpected error: %v", err)
 	}
 
 	if !slices.Equal(data, buf1) {
@@ -204,12 +204,12 @@ func BenchmarkNotifyingBuffer(b *testing.B) {
 				read := make([]byte, 65535)
 				rd := nb.Reader()
 				if _, err := io.ReadFull(rd, read); err != nil {
-					return fmt.Errorf("worker %d recieved error: %w", i, err)
+					return fmt.Errorf("NotifyingBufferReader.Read() worker %d recieved error: %w", i, err)
 				}
 
 				for i, v := range read {
 					if v != data[i] {
-						b.Errorf("mismatching slices on worker %d", i)
+						b.Errorf("NotifyingBufferReader.Read() mismatching slices on worker %d", i)
 					}
 				}
 
