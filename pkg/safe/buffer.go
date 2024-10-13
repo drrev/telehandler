@@ -1,7 +1,6 @@
 package safe
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"sync"
@@ -22,7 +21,7 @@ var ErrClosedWriter = errors.New("io: write on closed writer")
 type NotifyingBuffer struct {
 	closed bool
 	mu     sync.RWMutex
-	buff   bytes.Buffer
+	buff   []byte
 	notify chan struct{}
 }
 
@@ -32,7 +31,7 @@ func NewNotifyingBuffer() *NotifyingBuffer {
 	return &NotifyingBuffer{
 		closed: false,
 		mu:     sync.RWMutex{},
-		buff:   bytes.Buffer{},
+		buff:   []byte{},
 		notify: make(chan struct{}),
 	}
 }
@@ -57,16 +56,22 @@ func (b *NotifyingBuffer) Write(p []byte) (n int, err error) {
 		return 0, ErrClosedWriter
 	}
 
-	return b.buff.Write(p)
+	b.buff = append(b.buff, p...)
+	return len(p), nil
 }
 
 // Close implements io.Closer.
 func (b *NotifyingBuffer) Close() error {
 	b.mu.Lock()
+	if b.closed {
+		b.mu.Unlock()
+		return nil
+	}
 	b.closed = true
 	b.mu.Unlock()
 
 	close(b.notify) // broadcast, but do not add a new notify chan
+
 	return nil
 }
 
@@ -88,12 +93,12 @@ func (b *NotifyingBuffer) Wait() <-chan struct{} {
 	return b.notify
 }
 
-// Status returns the len of the current buffer and closed is true
+// Status returns the size of the current buffer and closed is true
 // if this buffer is closed and no more data will be written to it.
-func (b *NotifyingBuffer) Status() (len int, closed bool) {
+func (b *NotifyingBuffer) Status() (size int, closed bool) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	return b.buff.Len(), b.closed
+	return len(b.buff), b.closed
 }
 
 // NotifyingBufferReader is a utility type for reading from [NotifyingBuffer].
@@ -122,7 +127,7 @@ func (r *NotifyingBufferReader) Read(p []byte) (n int, err error) {
 	r.nb.mu.RLock()
 	defer r.nb.mu.RUnlock()
 
-	n = copy(p, r.nb.buff.Bytes()[r.offs:])
+	n = copy(p, r.nb.buff[r.offs:])
 	r.offs += n
 	return
 }
