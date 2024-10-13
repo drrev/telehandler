@@ -109,10 +109,10 @@ func (e *Executor) Start(j Job) (job Job, err error) {
 
 	logger := slog.With(
 		slog.Group("job",
-			slog.String("owner", job.Owner),
-			slog.String("job", job.ID.String()),
-			slog.String("cmd", job.Cmd),
-			slog.Any("args", job.Args),
+			slog.String("owner", j.Owner),
+			slog.String("id", j.ID.String()),
+			slog.String("cmd", j.Cmd),
+			slog.Any("args", j.Args),
 		),
 	)
 
