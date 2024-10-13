@@ -5,7 +5,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// reexecCmd represents the reexec command.
+// reexecCmd is used to wrap the execution of a child process
+// to configure cgroup and namespaces.
+// This command should only be called by [work.Executor] as
+// part of the [work.Job] execution process.
 var reexecCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "reexec",
