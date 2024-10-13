@@ -78,6 +78,12 @@ func (b *NotifyingBuffer) Close() error {
 // broadcast to notify any listeners of a change within the buffer.
 func (b *NotifyingBuffer) broadcast() {
 	b.mu.Lock()
+
+	if b.closed {
+		b.mu.Unlock()
+		return
+	}
+
 	notify := b.notify
 	b.notify = make(chan struct{})
 	b.mu.Unlock()
