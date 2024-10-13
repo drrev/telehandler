@@ -21,6 +21,49 @@ var ErrClosedWriter = errors.New("io: write on closed writer")
 type NotifyingBuffer struct {
 	closed bool
 	mu     sync.RWMutex
+	// TODO: In a real production-level application, storing in memory is
+	// a bad idea. Commands can--and will--OOM this process. In fact,
+	// when running this version, there are numerous problems with memory
+	// management. Namely, the go GC does not release allocated memory quickly
+	// unless there is pressure to do so from the OS. This can easily result in the following:
+	//
+	// # snippet from /proc/<pid>/stats:
+	// ...
+	// VmPeak: 18124988 kB
+	// VmSize: 18123964 kB
+	// VmLck:         0 kB
+	// VmPin:         0 kB
+	// VmHWM:  12953640 kB
+	// VmRSS:   9937416 kB
+	// ...
+	//
+	// The above memory allocations apply to the below runtime:
+	//
+	// (pprof) top
+	// Showing nodes accounting for 5630.53MB, 99.86% of 5638.62MB total
+	// Dropped 57 nodes (cum <= 28.19MB)
+	// Showing top 10 nodes out of 33
+	// 	  flat  flat%   sum%        cum   cum%
+	//  4664.79MB 82.73% 82.73%  4667.79MB 82.78%  github.com/drrev/telehandler/pkg/safe.(*NotifyingBuffer).Write
+	//   518.88MB  9.20% 91.93%   754.32MB 13.38%  github.com/drrev/telehandler/internal/foreman.(*Service).WatchJobOutput
+	//   227.34MB  4.03% 95.96%   227.34MB  4.03%  google.golang.org/grpc/mem.(*simpleBufferPool).Get
+	//   140.65MB  2.49% 98.46%   140.65MB  2.49%  google.golang.org/grpc/mem.NewTieredBufferPool.newSizedBufferPool.func1
+	//    78.87MB  1.40% 99.86%    78.87MB  1.40%  crypto/tls.(*halfConn).encrypt
+	// 		 0     0% 99.86%    78.87MB  1.40%  crypto/tls.(*Conn).Write
+	// 		 0     0% 99.86%    78.87MB  1.40%  crypto/tls.(*Conn).writeRecordLocked
+	// 		 0     0% 99.86%   754.32MB 13.38%  github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1._ForemanService_WatchJobOutput_Handler
+	// 		 0     0% 99.86%    78.87MB  1.40%  golang.org/x/net/http2.(*Framer).WriteData
+	// 		 0     0% 99.86%    78.87MB  1.40%  golang.org/x/net/http2.(*Framer).WriteDataPadded
+	//
+	//
+	// This of course does not outline everything; however, no matter how aggressively the below is optimized, it cannot support a large number of concurrent Jobs
+	// that generate a lot of output.
+	//
+	// To resolve that problem, it would likely be sufficient enough to write the subprocess output to a tmpfile, which can then be streamed. In the real world,
+	// this is what we would want to do anyway, so we can store jobs and their results in persistent storage, then users can check the result of those jobs later.
+	//
+	// In that case, Telehandler would need to be run in some kind of... sandbox... with namespaces and limits for disk utilization, etc. I wonder where we could
+	// find one of those?
 	buff   []byte
 	notify chan struct{}
 }
