@@ -20,7 +20,8 @@ func TestWriteAndNotify(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		// Check if notify channel is closed (which means buffer has changed)
-		<-nb.Wait()
+		ch := nb.Wait()
+		<-ch
 		wg.Done()
 	}()
 
@@ -31,6 +32,7 @@ func TestWriteAndNotify(t *testing.T) {
 	if n != len(data) {
 		t.Errorf("Expected to write %d bytes, but wrote %d", len(data), n)
 	}
+	nb.Close()
 
 	wg.Wait()
 }
@@ -41,6 +43,10 @@ func TestCloseAndWait(t *testing.T) {
 	_, err := nb.Write(data)
 	if err != nil {
 		t.Errorf("NotifyingBuffer.Write() unexpected error: %v", err)
+	}
+	err = nb.Close()
+	if err != nil {
+		t.Errorf("NotifyingBuffer.Close() unexpected error: %v", err)
 	}
 	err = nb.Close()
 	if err != nil {

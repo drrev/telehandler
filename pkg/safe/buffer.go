@@ -63,16 +63,29 @@ func (b *NotifyingBuffer) Write(p []byte) (n int, err error) {
 // Close implements io.Closer.
 func (b *NotifyingBuffer) Close() error {
 	b.mu.Lock()
+
+	if b.closed {
+		b.mu.Unlock()
+		return nil
+	}
+
 	b.closed = true
 	b.mu.Unlock()
 
 	close(b.notify) // broadcast, but do not add a new notify chan
+
 	return nil
 }
 
 // broadcast to notify any listeners of a change within the buffer.
 func (b *NotifyingBuffer) broadcast() {
 	b.mu.Lock()
+
+	if b.closed {
+		b.mu.Unlock()
+		return
+	}
+
 	notify := b.notify
 	b.notify = make(chan struct{})
 	b.mu.Unlock()
