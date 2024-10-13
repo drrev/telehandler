@@ -1,0 +1,17 @@
+{
+  "expiry": "10h",
+  "key": {
+    "algo": "ecdsa",
+    "size": 256
+  },
+  "CN": "tele-tester",
+  "names": [
+    {
+      "C": "US",
+      "O": "Teleport",
+      "OU": "telehandler",
+      "ST": "North Carolina",
+      "E": "user@localhost.internal"
+    }
+  ]
+}

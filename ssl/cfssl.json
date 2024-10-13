@@ -1,0 +1,39 @@
+{
+  "signing": {
+    "default": {
+      "expiry": "1h"
+    },
+    "profiles": {
+      "rootca": {
+        "usages": [
+          "signing",
+          "digital signature",
+          "key encipherment",
+          "cert sign",
+          "crl sign"
+        ],
+        "ca_constraint": {
+          "is_ca": true
+        },
+        "expiry": "24h"
+      },
+      "server": {
+        "usages": [
+          "signing",
+          "digital signing",
+          "key encipherment",
+          "server auth"
+        ],
+        "expiry": "24h"
+      },
+      "client": {
+        "usages": ["client auth"],
+        "expiry": "24h"
+      },
+      "bubba": {
+        "usages": ["client auth"],
+        "expiry": "24h"
+      }
+    }
+  }
+}
