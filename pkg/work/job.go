@@ -76,16 +76,15 @@ func (j *Job) setTerminate(code int, stopped bool) {
 	j.ExitCode = code
 	j.EndTime = time.Now()
 
-	if stopped {
+	if !stopped && code == 0 {
+		j.State = Completed
+	} else if !stopped {
+		j.State = Failed
+	} else {
 		j.State = Stopped
-		return
 	}
 
-	if code == 0 {
-		j.State = Completed
-	} else {
-		j.State = Failed
-	}
+	slog.Info("Job finished", slog.Any("job", j))
 }
 
 // setRunning is a simple helper for
@@ -93,6 +92,8 @@ func (j *Job) setTerminate(code int, stopped bool) {
 func (j *Job) setRunning() {
 	j.StartTime = time.Now()
 	j.State = Running
+
+	slog.Info("Job started", slog.Any("job", j))
 }
 
 // LogValue implements slog.LogValuer.
@@ -100,6 +101,7 @@ func (j Job) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("owner", j.Owner),
 		slog.String("id", j.ID.String()),
+		slog.String("state", string(j.State)),
 		slog.String("cmd", j.Cmd),
 		slog.Any("args", j.Args),
 	)
