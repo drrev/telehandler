@@ -68,3 +68,28 @@ func (j *Job) Parent() string {
 func (j *Job) Running() bool {
 	return j.State == Running
 }
+
+// setTerminate sets the correct State, ExitCode,
+// and EndTime all at once based on code and stopped.
+func (j *Job) setTerminate(code int, stopped bool) {
+	j.ExitCode = code
+	j.EndTime = time.Now()
+
+	if stopped {
+		j.State = Stopped
+		return
+	}
+
+	if code == 0 {
+		j.State = Completed
+	} else {
+		j.State = Failed
+	}
+}
+
+// setRunning is a simple helper for
+// syncronizing StartTime and State.
+func (j *Job) setRunning() {
+	j.StartTime = time.Now()
+	j.State = Running
+}
