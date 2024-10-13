@@ -1,7 +1,6 @@
 package safe
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -192,13 +191,13 @@ func BenchmarkNotifyingBuffer(b *testing.B) {
 
 		nb := &NotifyingBuffer{
 			closed: false,
-			buff:   bytes.Buffer{},
+			buff:   []byte{},
 			notify: make(chan struct{}),
 			mu:     sync.RWMutex{},
 		}
 
 		var eg errgroup.Group
-		for i := range 50000 {
+		for i := range 1000 {
 			i := i
 			eg.Go(func() error {
 				read := make([]byte, 65535)
