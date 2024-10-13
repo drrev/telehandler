@@ -63,10 +63,12 @@ func (b *NotifyingBuffer) Write(p []byte) (n int, err error) {
 // Close implements io.Closer.
 func (b *NotifyingBuffer) Close() error {
 	b.mu.Lock()
+
 	if b.closed {
 		b.mu.Unlock()
 		return nil
 	}
+
 	b.closed = true
 	b.mu.Unlock()
 
