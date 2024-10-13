@@ -1,6 +1,7 @@
 package work
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,7 +14,7 @@ import (
 
 // Reexec is used to run a Linux command in a subprocess wrapper. This must not be called
 // by anything other than the reexec command.
-func Reexec(cgroupRoot string, args []string) (err error) {
+func Reexec(ctx context.Context, cgroupRoot string, args []string) (err error) {
 	// Lock the OS thread to ensure that the currently executing thread does not die prematurely before this function returns.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -22,6 +23,10 @@ func Reexec(cgroupRoot string, args []string) (err error) {
 		return fmt.Errorf("setup runtime failed: %w", err)
 	}
 	defer teardownRuntime(cgroupRoot)
+	go func() {
+		<-ctx.Done()
+		teardownRuntime(cgroupRoot)
+	}()
 
 	// lookup command if we weren't given a full path
 	path := args[0]
@@ -91,15 +96,11 @@ func setupRuntime(cgroupRoot string) (err error) {
 		return fmt.Errorf("failed to mount over /proc: %w", err)
 	}
 
-	return err
+	return
 }
 
 // teardownRuntime cleans up from setupRuntime
 // AFTER the child process terminates.
-//
-// None of this is required, as it should be handled
-// by the host OS, but in case anything is needed
-// in the future that isn't, it can be added here.
 //
 // IMPORTANT: If the parent receives SIGKILL, or SIGSTOP,
 // this function will not be executed, as those

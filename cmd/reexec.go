@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"os/signal"
+	"syscall"
+
 	"github.com/drrev/telehandler/pkg/work"
 	"github.com/spf13/cobra"
 )
@@ -12,8 +15,20 @@ import (
 var reexecCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "reexec",
-	RunE: func(_ *cobra.Command, args []string) error {
-		return work.Reexec(cgroupRoot, args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
+		// intercept signals for graceful shutdown
+		basectx, cancel := signal.NotifyContext(
+			ctx,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+			syscall.SIGTERM,
+		)
+		defer cancel()
+
+		return work.Reexec(basectx, cgroupRoot, args)
 	},
 }
 
