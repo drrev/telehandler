@@ -107,15 +107,7 @@ func (e *Executor) Start(j Job) (job Job, err error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logger := slog.With(
-		slog.Group("job",
-			slog.String("owner", j.Owner),
-			slog.String("id", j.ID.String()),
-			slog.String("cmd", j.Cmd),
-			slog.Any("args", j.Args),
-		),
-	)
-
+	logger := slog.With("job", j)
 	refj := &j
 
 	if v, ok := e.cmds[refj.ID]; ok {
@@ -148,6 +140,7 @@ func (e *Executor) Start(j Job) (job Job, err error) {
 		return j, err
 	}
 	refj.setRunning()
+	logger.Info("Job started")
 
 	// wait so process doesn't become a zombie
 	go e.wait(logger, ec)

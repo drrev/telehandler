@@ -1,6 +1,7 @@
 package work
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -92,4 +93,14 @@ func (j *Job) setTerminate(code int, stopped bool) {
 func (j *Job) setRunning() {
 	j.StartTime = time.Now()
 	j.State = Running
+}
+
+// LogValue implements slog.LogValuer.
+func (j Job) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("owner", j.Owner),
+		slog.String("id", j.ID.String()),
+		slog.String("cmd", j.Cmd),
+		slog.Any("args", j.Args),
+	)
 }
