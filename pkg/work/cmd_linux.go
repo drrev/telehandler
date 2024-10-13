@@ -16,7 +16,6 @@ func makeCommand(buf *safe.NotifyingBuffer, cgroot string, job Job) *exec.Cmd {
 	return &exec.Cmd{
 		Path:   "/proc/self/exe", // reexec--this ONLY works on Linux
 		Args:   append([]string{"reexec", "reexec", "--cgroup-root", cgroot, "--", job.Cmd}, job.Args...),
-		Stdin:  os.Stdin,
 		Stdout: buf,
 		Stderr: buf,
 		// TODO: create empty ENV to prevent leaking any PI.
