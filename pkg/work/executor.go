@@ -1,18 +1,17 @@
 package work
 
 import (
-	"errors"
-	"fmt"
-	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
-	"syscall"
 
 	"github.com/drrev/telehandler/pkg/safe"
 	"github.com/google/uuid"
 )
+
+// commandStarter starts and waits for execution of commands,
+// then calls done with the process exit_code.
+type commandStarter func(c *exec.Cmd, done func(exitCode int)) error
 
 // Executor is a thread-safe [Job] manager.
 // Each Job runs in a separate subprocess.
@@ -28,45 +27,23 @@ import (
 //
 // See [NewExecutor].
 type Executor struct {
-	cmds       map[uuid.UUID]*execContext
-	cgroupPath string
-	mu         *sync.Mutex
+	mu       sync.RWMutex
+	cgroot   string
+	contexts map[uuid.UUID]*execContext
+	startCmd commandStarter
 }
 
 // NewExecutor creates an initialized [Executor] ready for use.
-func NewExecutor(cgroupPath string) *Executor {
-	return &Executor{make(map[uuid.UUID]*execContext), cgroupPath, &sync.Mutex{}}
-}
-
-// Find returns a copy of any Job found. If no Job is found, a [ErrJobNotFound]
-// is returned and the Job value is zero.
-func (e *Executor) Find(jobID uuid.UUID) (job Job, err error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	ec, ok := e.cmds[jobID]
-	if !ok {
-		return job, jobNotFound(jobID)
+func NewExecutor(cgroupRoot string) *Executor {
+	return &Executor{
+		mu:       sync.RWMutex{},
+		cgroot:   cgroupRoot,
+		contexts: make(map[uuid.UUID]*execContext),
+		startCmd: startCmd,
 	}
-
-	return ec.Job, nil
 }
 
-// Running returns v=true, ok=true if the given jobID belongs to a running job.
-func (e *Executor) Running(jobID uuid.UUID) (v bool, ok bool) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	ec, ok := e.cmds[jobID]
-	if !ok {
-		return false, false
-	}
-
-	return ec.Running(), true
-}
-
-// Start the given [Job] and return an updated Job copy. An error is returned
-// if the Job could not be started.
+// Start the given [Job]. An error is returned if the Job could not be started.
 //
 // [ErrInvalidState] is returned if the Job already exists with a non-running status.
 //
@@ -75,69 +52,36 @@ func (e *Executor) Running(jobID uuid.UUID) (v bool, ok bool) {
 // This operation is stateful. If this call is successful, a copy of Job is
 // maintained internally. Use [Executor.Find] to lookup any existing Jobs for the
 // latest state.
-func (e *Executor) Start(j Job) (Job, error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	logger := slog.With("job", j)
-	if v, ok := e.cmds[j.ID]; ok {
-		if v.Running() {
-			logger.Debug("Job is already running")
-			return v.Job, nil
+func (m *Executor) Start(j Job) error {
+	ec, err := m.lookupContext(j.ID)
+	if err == nil {
+		if !ec.Running() {
+			return invalidJobState(ec.State)
 		}
-		logger.Warn("Start called on terminated job")
-		return v.Job, invalidJobState(j.State)
+		return nil
 	}
-
-	// buffer up to 65535 by default, this will grow up to 128TiB automatically
-	buf := safe.NewNotifyingBuffer()
-	cmd := makeCommand(buf, filepath.Join(e.cgroupPath, j.ID.String()), j)
-
-	// save job regardless of the outcome
-	ec := &execContext{
-		Job:    j,
-		cmd:    cmd,
-		output: buf,
-	}
-	e.cmds[ec.ID] = ec
-
-	// TODO: make start/stop/etc. into tight methods on execContext to prevent
-	// bookkeeping errors for job <-> cmd state
-	if err := ec.start(); err != nil {
-		slog.Error("Job failed to start", slog.Any("job", ec), slog.Int("exit_code", ec.ExitCode), slog.Any("error", err))
-		return ec.Job, err
-	}
-
-	// wait so process doesn't become a zombie
-	go e.wait(logger, ec)
-
-	return ec.Job, nil
+	return m.start(j)
 }
 
-// wait is a helper for waiting on an execContext to finish and
-// perform any necessary bookkeeping.
-func (e *Executor) wait(logger *slog.Logger, ec *execContext) {
-	// wait so process doesn't become a zombie
-	defer ec.output.Close()
+// start the given [Job].
+// An error is returned if the Job could not be started.
+func (m *Executor) start(j Job) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	err := ec.cmd.Wait()
-	if err != nil {
-		logger.Error("Wait failed on process", slog.Any("error", err))
-
-		var exiterr *exec.ExitError
-		if errors.As(err, &exiterr) {
-			e.mu.Lock()
-			ec.setTerminate(exiterr.ExitCode(), ec.stopped.Load())
-			e.mu.Unlock()
-			return
-		}
-
-		// TODO: Determine how to handle other error types.
+	ec := &execContext{
+		Job: j,
+		m:   sync.Mutex{},
+		buf: safe.NewNotifyingBuffer(),
 	}
+	m.contexts[j.ID] = ec
 
-	e.mu.Lock()
-	ec.setTerminate(ec.cmd.ProcessState.ExitCode(), ec.stopped.Load())
-	e.mu.Unlock()
+	// make a new cgroup for the job specifically
+	cgroupJob := filepath.Join(m.cgroot, j.ID.String())
+	cmd, cancel := makeCommand(ec.buf, cgroupJob, j.Cmd, j.Args...)
+	ec.stop = cancel
+
+	return m.startCmd(cmd, ec.exit)
 }
 
 // Stop a Job using the provided jobID. A non-nil error is returned
@@ -145,79 +89,63 @@ func (e *Executor) wait(logger *slog.Logger, ec *execContext) {
 // with the given jobID exists.
 //
 // Calling Stop on a non-running Job is a no-op.
-func (e *Executor) Stop(jobID uuid.UUID) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	v, ok := e.cmds[jobID]
-	if !ok {
-		return jobNotFound(jobID)
+func (m *Executor) Stop(id uuid.UUID) error {
+	ec, err := m.lookupContext(id)
+	if err != nil {
+		return err
 	}
-
-	return v.kill()
+	return ec.interrupt()
 }
 
-// Output returns a [OutputReader] for reading STDOUT and STDERR from a Job. This method
+// Lookup returns a copy of any [Job] found. If no Job is found, a [ErrJobNotFound]
+// is returned and the Job value is zero.
+func (m *Executor) Lookup(id uuid.UUID) (Job, error) {
+	ec, err := m.lookupContext(id)
+	if err != nil {
+		return Job{}, err
+	}
+	return ec.Job, nil
+}
+
+// Watch returns a [safe.NotifyingBufferReader] for reading STDOUT and STDERR from a [Job]. This method
 // may be used to get output from Jobs in any state.
-func (e *Executor) Output(jobID uuid.UUID) (*safe.NotifyingBufferReader, error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	v, ok := e.cmds[jobID]
-	if !ok {
-		return nil, fmt.Errorf("unknown job '%v'", jobID)
+func (m *Executor) Watch(id uuid.UUID) (*safe.NotifyingBufferReader, error) {
+	ec, err := m.lookupContext(id)
+	if err != nil {
+		return nil, err
 	}
 
-	return v.output.Reader(), nil
+	return ec.buffer().Reader(), nil
 }
 
-// Teardown sends the given signal to all running Jobs and cleans up. This should only
-// be used when the calling process is exiting.
-func (e *Executor) Teardown() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	errs := make([]error, 0, len(e.cmds))
-	for _, v := range e.cmds {
-		if !v.cmd.ProcessState.Exited() {
-			errs = append(errs, v.cmd.Process.Kill())
-		}
-	}
-
-	return errors.Join(errs...)
-}
-
-// execContext is a full execution context for a Job.
-// Once a Job is started, this is the source of truth for Job state.
-type execContext struct {
-	Job
-	stopped atomic.Bool
-	cmd     *exec.Cmd
-	output  *safe.NotifyingBuffer
-}
-
-// kill the underlying job and ensure bookkeeping.
-func (e *execContext) kill() error {
-	// if the job is already terminated, do nothing
-	if !e.Running() {
-		return nil
-	}
-	e.stopped.Store(true)
-
-	e.State = Stopped
-	_ = e.output.Close()
-	e.cmd.Stdout = nil
-	e.cmd.Stderr = nil
-	return e.cmd.Process.Signal(syscall.SIGINT)
-}
-
-func (e *execContext) start() error {
-	if err := e.cmd.Start(); err != nil {
-		e.setTerminate(e.cmd.ProcessState.ExitCode(), false)
-		e.output.Close()
+// Wait for a [Job] to terminate.
+func (m *Executor) Wait(id uuid.UUID) error {
+	ec, err := m.lookupContext(id)
+	if err != nil {
 		return err
 	}
 
-	e.setRunning()
+	if !ec.Running() {
+		return nil
+	}
+
+	buf := ec.buffer()
+	for _, closed := buf.Status(); !closed; _, closed = buf.Status() {
+		buf.Wait()
+	}
+
 	return nil
+}
+
+// lookupContext is a thread-safe method for finding execContext by Job ID.
+func (m *Executor) lookupContext(id uuid.UUID) (*execContext, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	ec, ok := m.contexts[id]
+	if !ok {
+		return nil, jobNotFound(id)
+	}
+
+	return ec, nil
 }

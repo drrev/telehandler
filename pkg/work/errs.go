@@ -1,10 +1,13 @@
 package work
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 )
+
+var ErrCannotStop = errors.New("cannot stop process")
 
 func invalidJobState(s JobState) *ErrInvalidJobState {
 	return &ErrInvalidJobState{s}
@@ -36,5 +39,5 @@ type ErrJobNotFound struct {
 
 // Error implements error.
 func (e *ErrJobNotFound) Error() string {
-	return fmt.Sprintf("unknown job '%v'", e.id)
+	return fmt.Sprintf("no job found with id='%v'", e.id)
 }

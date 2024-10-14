@@ -70,32 +70,6 @@ func (j *Job) Running() bool {
 	return j.State == Running
 }
 
-// setTerminate sets the correct State, ExitCode,
-// and EndTime all at once based on code and stopped.
-func (j *Job) setTerminate(code int, stopped bool) {
-	j.ExitCode = code
-	j.EndTime = time.Now()
-
-	if !stopped && code == 0 {
-		j.State = Completed
-	} else if !stopped {
-		j.State = Failed
-	} else {
-		j.State = Stopped
-	}
-
-	slog.Info("Job finished", slog.Any("job", j))
-}
-
-// setRunning is a simple helper for
-// syncronizing StartTime and State.
-func (j *Job) setRunning() {
-	j.StartTime = time.Now()
-	j.State = Running
-
-	slog.Info("Job started", slog.Any("job", j))
-}
-
 // LogValue implements slog.LogValuer.
 func (j Job) LogValue() slog.Value {
 	return slog.GroupValue(
