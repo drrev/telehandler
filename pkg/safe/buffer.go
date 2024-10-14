@@ -159,6 +159,7 @@ type NotifyingBufferReader struct {
 	offs  int
 	nb    *NotifyingBuffer
 	close chan struct{}
+	once  sync.Once
 }
 
 // Read implements io.Reader.
@@ -185,6 +186,8 @@ func (r *NotifyingBufferReader) Read(p []byte) (n int, err error) {
 
 // Close implements io.Closer.
 func (r *NotifyingBufferReader) Close() error {
-	close(r.close)
+	r.once.Do(func() {
+		close(r.close)
+	})
 	return nil
 }
