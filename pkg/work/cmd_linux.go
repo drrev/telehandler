@@ -42,6 +42,8 @@ func makeCommand(buf *safe.NotifyingBuffer, cgroot string, name string, args ...
 
 	// setup Linux specific proc attrs for namespaces, ID mapping, and Pdeathsig
 	cmd.SysProcAttr = &syscall.SysProcAttr{
+		// Force setpgid so we do not accidentally kill the parent (Telehandler) process.
+		Setpgid: true,
 		// see: https://man7.org/linux/man-pages/man2/pr_set_pdeathsig.2const.html
 		Pdeathsig: syscall.SIGTERM,
 		// see: https://man7.org/linux/man-pages/man2/unshare.2.html#DESCRIPTION
