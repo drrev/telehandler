@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/drrev/telehandler/pkg/safe"
 	"github.com/google/uuid"
@@ -52,24 +53,19 @@ func NewExecutor(cgroupRoot string) *Executor {
 // This operation is stateful. If this call is successful, a copy of Job is
 // maintained internally. Use [Executor.Find] to lookup any existing Jobs for the
 // latest state.
-func (m *Executor) Start(j Job) error {
-	ec, err := m.lookupContext(j.ID)
-	if err == nil {
-		if !ec.Running() {
-			return invalidJobState(ec.State)
-		}
-		return nil
-	}
-	return m.start(j)
-}
-
-// start the given [Job].
-// An error is returned if the Job could not be started.
-func (m *Executor) start(j Job) error {
+func (m *Executor) Start(j Job) (Job, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	ec := &execContext{
+	ec, err := m.lookupContext(j.ID)
+	if err == nil {
+		if !ec.Running() {
+			return ec.Job, invalidJobState(ec.State)
+		}
+		return ec.Job, nil
+	}
+
+	ec = &execContext{
 		Job: j,
 		m:   sync.Mutex{},
 		buf: safe.NewNotifyingBuffer(),
@@ -81,7 +77,14 @@ func (m *Executor) start(j Job) error {
 	cmd, cancel := makeCommand(ec.buf, cgroupJob, j.Cmd, j.Args...)
 	ec.stop = cancel
 
-	return m.startCmd(cmd, ec.exit)
+	if err := m.startCmd(cmd, ec.exit); err != nil {
+		return ec.Job, err
+	}
+
+	ec.StartTime = time.Now()
+	ec.State = Running
+
+	return ec.Job, nil
 }
 
 // Stop a Job using the provided jobID. A non-nil error is returned
@@ -90,6 +93,9 @@ func (m *Executor) start(j Job) error {
 //
 // Calling Stop on a non-running Job is a no-op.
 func (m *Executor) Stop(id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	ec, err := m.lookupContext(id)
 	if err != nil {
 		return err
@@ -100,6 +106,9 @@ func (m *Executor) Stop(id uuid.UUID) error {
 // Lookup returns a copy of any [Job] found. If no Job is found, a [ErrJobNotFound]
 // is returned and the Job value is zero.
 func (m *Executor) Lookup(id uuid.UUID) (Job, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	ec, err := m.lookupContext(id)
 	if err != nil {
 		return Job{}, err
@@ -110,6 +119,9 @@ func (m *Executor) Lookup(id uuid.UUID) (Job, error) {
 // OpenReader returns a [safe.NotifyingBufferReader] for reading STDOUT and STDERR from a [Job]. This method
 // may be used to get output from Jobs in any state.
 func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	ec, err := m.lookupContext(id)
 	if err != nil {
 		return nil, err
@@ -120,6 +132,8 @@ func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 
 // Wait for a [Job] to terminate.
 func (m *Executor) Wait(id uuid.UUID) error {
+	m.mu.RLock()
+
 	ec, err := m.lookupContext(id)
 	if err != nil {
 		return err
@@ -130,6 +144,9 @@ func (m *Executor) Wait(id uuid.UUID) error {
 	}
 
 	buf := ec.buffer()
+
+	m.mu.RUnlock()
+
 	for _, closed := buf.Status(); !closed; _, closed = buf.Status() {
 		buf.Wait()
 	}
@@ -139,9 +156,6 @@ func (m *Executor) Wait(id uuid.UUID) error {
 
 // lookupContext is a thread-safe method for finding execContext by Job ID.
 func (m *Executor) lookupContext(id uuid.UUID) (*execContext, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	ec, ok := m.contexts[id]
 	if !ok {
 		return nil, jobNotFound(id)
