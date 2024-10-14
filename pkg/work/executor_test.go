@@ -27,7 +27,6 @@ func TestExecutor_Start(t *testing.T) {
 	}
 
 	type fields struct {
-		cgroot   string
 		contexts map[uuid.UUID]*execContext
 	}
 	type args struct {
@@ -39,35 +38,38 @@ func TestExecutor_Start(t *testing.T) {
 		args      args
 		wantErr   func(error) bool
 		startFn   func(*int, error) commandStarter
+		want      Job
 		wantCalls int
 		injectErr error
 	}{
 		{
 			name:    "existing non-running job",
-			fields:  fields{cgroot: "/tmp", contexts: map[uuid.UUID]*execContext{uuid.Max: {}}},
-			args:    args{j: Job{ID: uuid.Max}},
+			fields:  fields{contexts: map[uuid.UUID]*execContext{uuid.Nil: {}}},
+			args:    args{j: Job{ID: uuid.Nil}},
 			wantErr: utils.ErrorTextContains(t, "invalid state"),
 			startFn: noopStart,
 		},
 		{
 			name:    "existing running job",
-			fields:  fields{cgroot: "/tmp", contexts: map[uuid.UUID]*execContext{uuid.Max: {Job: Job{State: Running}}}},
-			args:    args{j: Job{ID: uuid.Max}},
+			fields:  fields{contexts: map[uuid.UUID]*execContext{uuid.Nil: {Job: Job{State: Running}}}},
+			args:    args{j: Job{ID: uuid.Nil}},
+			want:    Job{State: Running},
 			wantErr: utils.NoError(t),
 			startFn: noopStart,
 		},
 		{
 			name:      "start new job",
-			fields:    fields{cgroot: "/tmp", contexts: make(map[uuid.UUID]*execContext)},
-			args:      args{j: Job{ID: uuid.Max}},
+			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
+			args:      args{j: Job{ID: uuid.Nil}},
 			wantErr:   utils.NoError(t),
 			startFn:   mockStart,
+			want:      Job{StartTime: time.Now(), State: Running},
 			wantCalls: 1,
 		},
 		{
 			name:      "start new job with error",
-			fields:    fields{cgroot: "/tmp", contexts: make(map[uuid.UUID]*execContext)},
-			args:      args{j: Job{ID: uuid.Max}},
+			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
+			args:      args{j: Job{ID: uuid.Nil}},
 			wantErr:   utils.ErrorTextContains(t, "testing error"),
 			startFn:   mockStart,
 			wantCalls: 1,
@@ -79,13 +81,26 @@ func TestExecutor_Start(t *testing.T) {
 			startCalls := 0
 			m := &Executor{
 				mu:       sync.RWMutex{},
-				cgroot:   tt.fields.cgroot,
+				cgroot:   "/tmp",
 				contexts: tt.fields.contexts,
 				startCmd: tt.startFn(&startCalls, tt.injectErr),
 			}
-			if err := m.Start(tt.args.j); !tt.wantErr(err) {
+			got, err := m.Start(tt.args.j)
+
+			if !tt.wantErr(err) {
 				t.Errorf("Executor.Start() error = %v", err)
 			}
+
+			if tt.want.StartTime.IsZero() != got.StartTime.IsZero() {
+				t.Errorf("Executor.Start() invalid StartTime %v", got.StartTime)
+			}
+
+			// ignore start time for deep equals
+			tt.want.StartTime = got.StartTime
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Executor.Start() = %+v, want %+v", got, tt.want)
+			}
+
 			if startCalls != tt.wantCalls {
 				t.Errorf("Executor.Start() got %v calls, expected %v", startCalls, tt.wantCalls)
 			}
@@ -168,7 +183,7 @@ func TestExecutor_Lookup(t *testing.T) {
 	}
 }
 
-func TestExecutor_Watch(t *testing.T) {
+func TestExecutor_OpenReader(t *testing.T) {
 	type args struct {
 		id uuid.UUID
 	}

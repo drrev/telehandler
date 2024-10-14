@@ -23,7 +23,8 @@ are executed in the local environment.
 		mgr := work.NewExecutor(cgroupRoot)
 
 		job := *work.NewJob("admin", args[0], args[1:])
-		if err := mgr.Start(job); err != nil {
+		job, err := mgr.Start(job)
+		if err != nil {
 			return err
 		}
 
