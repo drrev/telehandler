@@ -1,6 +1,7 @@
 package work
 
 import (
+	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -83,6 +84,7 @@ func (m *Executor) Start(j Job) (Job, error) {
 
 	ec.StartTime = time.Now()
 	ec.State = Running
+	slog.Info("Job started", slog.Any("job", ec.LogValue()))
 
 	return ec.Job, nil
 }

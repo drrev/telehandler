@@ -1,6 +1,7 @@
 package work
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
@@ -62,4 +63,6 @@ func (e *execContext) exit(exitCode int) {
 	} else {
 		e.State = Failed
 	}
+
+	slog.Info("Job terminated", slog.Any("job", e.LogValue()))
 }
