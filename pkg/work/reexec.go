@@ -23,10 +23,10 @@ func Reexec(ctx context.Context, cgroupRoot string, args []string) (err error) {
 		return fmt.Errorf("setup runtime failed: %w", err)
 	}
 	defer teardownRuntime(cgroupRoot)
-	go func() {
-		<-ctx.Done()
+	cancel := context.AfterFunc(ctx, func() {
 		teardownRuntime(cgroupRoot)
-	}()
+	})
+	defer cancel()
 
 	// lookup command if we weren't given a full path
 	path := args[0]
