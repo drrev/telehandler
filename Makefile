@@ -20,12 +20,14 @@ client-cert: root-ca
 
 certs: root-ca server-cert client-cert
 
+.PHONY: docs
 docs:
 	go run -v -tags docs . gen
 
 build:
 	go build -v -o ./telehandler .
 
+.PHONY: clean
 clean:
 	rm -f ssl/*.{pem,csr}
 	rm -f telehandler

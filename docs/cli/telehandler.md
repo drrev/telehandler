@@ -14,5 +14,6 @@ Telehandler is a simple service that is used to start, stop, query status, and w
 
 * [telehandler client](telehandler_client.md)	 - client is used to run subcommands over gRPC
 * [telehandler completion](telehandler_completion.md)	 - Generate the autocompletion script for the specified shell
+* [telehandler local](telehandler_local.md)	 - Run the given command with cgroup and namespace enforcement.
 * [telehandler server](telehandler_server.md)	 - Starts a gRPC server for running and managing jobs
 
