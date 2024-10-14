@@ -37,7 +37,6 @@ func startCmd(c *exec.Cmd, done func(exitCode int)) error {
 		if err := c.Wait(); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				code = exitErr.ExitCode()
-				// code = exitErr.ProcessState.ExitCode()
 			}
 		}
 		done(code)
