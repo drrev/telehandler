@@ -198,7 +198,7 @@ func TestExecutor_Watch(t *testing.T) {
 				cgroot:   "",
 				contexts: tt.contexts,
 			}
-			got, err := m.Watch(tt.args.id)
+			got, err := m.OpenReader(tt.args.id)
 			if !tt.wantErr(err) {
 				t.Errorf("Executor.Watch() error = %v", err)
 				return

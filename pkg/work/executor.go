@@ -107,9 +107,9 @@ func (m *Executor) Lookup(id uuid.UUID) (Job, error) {
 	return ec.Job, nil
 }
 
-// Watch returns a [safe.NotifyingBufferReader] for reading STDOUT and STDERR from a [Job]. This method
+// OpenReader returns a [safe.NotifyingBufferReader] for reading STDOUT and STDERR from a [Job]. This method
 // may be used to get output from Jobs in any state.
-func (m *Executor) Watch(id uuid.UUID) (*safe.NotifyingBufferReader, error) {
+func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error) {
 	ec, err := m.lookupContext(id)
 	if err != nil {
 		return nil, err
