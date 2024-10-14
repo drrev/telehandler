@@ -243,9 +243,12 @@ func TestExecutor_Wait(t *testing.T) {
 	buf := safe.NewNotifyingBuffer()
 	buf.Write([]byte{0, 1})
 
-	m.contexts = map[uuid.UUID]*execContext{uuid.Nil: {
+	ec := &execContext{
+		Job: Job{State: Running},
 		buf: buf,
-	}}
+	}
+
+	m.contexts = map[uuid.UUID]*execContext{uuid.Nil: ec}
 
 	done := make(chan struct{})
 	go func() {
@@ -259,7 +262,9 @@ func TestExecutor_Wait(t *testing.T) {
 	default:
 	}
 
-	buf.Close()
+	ec.m.Lock()
+	ec.State = Completed
+	ec.m.Unlock()
 
 	select {
 	case <-time.After(200 * time.Millisecond):
