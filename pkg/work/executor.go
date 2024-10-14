@@ -135,25 +135,25 @@ func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 // Wait for a [Job] to terminate.
 func (m *Executor) Wait(id uuid.UUID) error {
 	m.mu.RLock()
-
 	ec, err := m.lookupContext(id)
 	if err != nil {
+		m.mu.RUnlock()
 		return err
 	}
 
 	if !ec.Running() {
+		m.mu.RUnlock()
 		return nil
 	}
-
-	buf := ec.buffer()
-
 	m.mu.RUnlock()
 
-	for _, closed := buf.Status(); !closed; _, closed = buf.Status() {
-		buf.Wait()
+	for {
+		ec.m.Lock()
+		if !ec.Running() {
+			return nil
+		}
+		ec.m.Unlock()
 	}
-
-	return nil
 }
 
 // lookupContext is a thread-safe method for finding execContext by Job ID.
