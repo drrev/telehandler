@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"syscall"
 
@@ -28,15 +27,6 @@ func Reexec(ctx context.Context, cgroupRoot string, args []string) (err error) {
 	})
 	defer cancel()
 
-	// lookup command if we weren't given a full path
-	path := args[0]
-	if !filepath.IsAbs(args[0]) {
-		path, err = exec.LookPath(args[0])
-		if err != nil {
-			return err
-		}
-	}
-
 	// get the file descriptor for cgroupRoot
 	// then set it in SysProcAttr to take advantage
 	// of CLONE_INTO_CGROUP.
@@ -48,18 +38,19 @@ func Reexec(ctx context.Context, cgroupRoot string, args []string) (err error) {
 	defer fp.Close()
 
 	// Rebind all, ensure Pdeathsig to kill child on parent death.
-	cmd := &exec.Cmd{
-		Path:   path,
-		Args:   args,
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Env:    os.Environ(),
-		SysProcAttr: &syscall.SysProcAttr{
-			Pdeathsig:   syscall.SIGTERM,
-			UseCgroupFD: true,
-			CgroupFD:    int(fp.Fd()),
-		},
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig:   syscall.SIGTERM,
+		UseCgroupFD: true,
+		CgroupFD:    int(fp.Fd()),
+	}
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(syscall.SIGTERM)
 	}
 
 	return cmd.Run()

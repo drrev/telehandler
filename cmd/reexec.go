@@ -13,8 +13,10 @@ import (
 // This command should only be called by [work.Executor] as
 // part of the [work.Job] execution process.
 var reexecCmd = &cobra.Command{
-	Hidden: true,
-	Use:    "reexec",
+	Hidden:        true,
+	SilenceErrors: true,
+	SilenceUsage:  true,
+	Use:           "reexec",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 

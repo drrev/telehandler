@@ -28,7 +28,7 @@ func makeCommand(buf *safe.NotifyingBuffer, cgroot string, name string, args ...
 	// max wait after Cancel() to send SIGKILL
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Cancel = func() error {
-		if err := cmd.Process.Signal(os.Interrupt); err != nil {
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
 			return err
 		}
 		cmd.Stdout = nil
