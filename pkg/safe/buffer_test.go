@@ -88,7 +88,7 @@ func TestReader(t *testing.T) {
 		t.Errorf("NotifyingBufferReader.Read() expected %s, got %s", data, buf)
 	}
 
-	nb.Close()
+	r.Close()
 	n, err = r.Read(buf)
 	if err != io.EOF {
 		t.Errorf("NotifyingBufferReader.Read() expected EOF, got %v", err)
@@ -96,6 +96,21 @@ func TestReader(t *testing.T) {
 	if n != 0 {
 		t.Error("NotifyingBufferReader.Read() expected no data to be read")
 	}
+	r.Close()
+
+	r = nb.Reader()
+	nb.Close()
+
+	_, _ = r.Read(buf)
+	n, err = r.Read(buf)
+	if err != io.EOF {
+		t.Errorf("NotifyingBufferReader.Read() expected EOF, got %v", err)
+	}
+	if n != 0 {
+		t.Error("NotifyingBufferReader.Read() expected no data to be read")
+	}
+
+	r.Close()
 }
 
 func TestConcurrentWriteAndRead(t *testing.T) {
