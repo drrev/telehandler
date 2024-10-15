@@ -61,9 +61,9 @@ func (m *Executor) Start(j Job) (Job, error) {
 	ec, err := m.lookupContext(j.ID)
 	if err == nil {
 		if !ec.Running() {
-			return ec.Job, invalidJobState(ec.State)
+			return ec.jobSafe(), invalidJobState(ec.State)
 		}
-		return ec.Job, nil
+		return ec.jobSafe(), nil
 	}
 
 	ec = &execContext{
@@ -79,14 +79,14 @@ func (m *Executor) Start(j Job) (Job, error) {
 	ec.stop = cancel
 
 	if err := m.startCmd(cmd, ec.exit); err != nil {
-		return ec.Job, err
+		return ec.jobSafe(), err
 	}
 
 	ec.StartTime = time.Now()
 	ec.State = Running
 	slog.Info("Job started", slog.Any("job", ec.LogValue()))
 
-	return ec.Job, nil
+	return ec.jobSafe(), nil
 }
 
 // Stop a Job using the provided jobID. A non-nil error is returned
@@ -96,35 +96,36 @@ func (m *Executor) Start(j Job) (Job, error) {
 // Calling Stop on a non-running Job is a no-op.
 func (m *Executor) Stop(id uuid.UUID) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	ec, err := m.lookupContext(id)
+	m.mu.Unlock()
+
 	if err != nil {
 		return err
 	}
+
 	return ec.interrupt()
 }
 
 // Lookup returns a copy of any [Job] found. If no Job is found, a [ErrJobNotFound]
 // is returned and the Job value is zero.
-func (m *Executor) Lookup(id uuid.UUID) (Job, error) {
+func (m *Executor) Lookup(id uuid.UUID) (job Job, err error) {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	ec, err := m.lookupContext(id)
-	if err != nil {
-		return Job{}, err
+	m.mu.RUnlock()
+
+	if err == nil {
+		job = ec.jobSafe()
 	}
-	return ec.Job, nil
+	return
 }
 
 // OpenReader returns a [safe.NotifyingBufferReader] for reading STDOUT and STDERR from a [Job]. This method
 // may be used to get output from Jobs in any state.
 func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error) {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	ec, err := m.lookupContext(id)
+	m.mu.RUnlock()
+
 	if err != nil {
 		return nil, err
 	}
@@ -136,16 +137,11 @@ func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 func (m *Executor) Wait(id uuid.UUID) error {
 	m.mu.RLock()
 	ec, err := m.lookupContext(id)
+	m.mu.RUnlock()
+
 	if err != nil {
-		m.mu.RUnlock()
 		return err
 	}
-
-	if !ec.Running() {
-		m.mu.RUnlock()
-		return nil
-	}
-	m.mu.RUnlock()
 
 	for {
 		if !ec.Running() {
