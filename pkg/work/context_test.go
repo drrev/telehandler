@@ -79,6 +79,7 @@ func Test_execContext_exit(t *testing.T) {
 		job      Job
 		exitCode int
 		wantJob  Job
+		stopped  bool
 	}{
 		{
 			name:     "success",
@@ -95,6 +96,7 @@ func Test_execContext_exit(t *testing.T) {
 		{
 			name:     "interrupted",
 			exitCode: -1,
+			stopped:  true,
 			job:      Job{},
 			wantJob:  Job{State: Stopped, ExitCode: -1},
 		},
@@ -107,6 +109,7 @@ func Test_execContext_exit(t *testing.T) {
 				m:    sync.Mutex{},
 				buf:  safe.NewNotifyingBuffer(),
 			}
+			e.stopped.Store(tt.stopped)
 			e.exit(tt.exitCode)
 
 			// copy EndTime to prevent valid equality failures

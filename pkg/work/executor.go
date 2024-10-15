@@ -148,11 +148,9 @@ func (m *Executor) Wait(id uuid.UUID) error {
 	m.mu.RUnlock()
 
 	for {
-		ec.m.Lock()
 		if !ec.Running() {
 			return nil
 		}
-		ec.m.Unlock()
 	}
 }
 
