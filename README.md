@@ -106,7 +106,7 @@ All output is saved to files named `out-*`. All data should be the same across a
 
 The rate per seconds is printed for each watcher every second with a final average at the end.
 
-> Using this simple benchmark, I sent the ArchLinux ISO across 100 workers with a cumulative avg rate of 1GiB/s. All files hashed equal to the source.
+> Using this simple benchmark, I sent the ArchLinux ISO across 100 workers with a cumulative avg rate of 1GiB/s on a AMD 5950x. All files hashed equal to the source.
 > 
 > The image was sent into STDOUT with `cat`:   
 > `./telehandler client benchmark cat data/archlinux-2024.10.01-x86_64.iso`
