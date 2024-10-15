@@ -140,7 +140,7 @@ func TestConcurrentWriteAndRead(t *testing.T) {
 	}()
 
 	for n < len(buf) {
-		r, err := r.Read(buf)
+		r, err := r.Read(buf[n:])
 		n += r
 		if err != nil {
 			t.Errorf("NotifyingBufferReader.Read(): unexpected error %v", err)
@@ -153,12 +153,12 @@ func TestConcurrentWriteAndRead(t *testing.T) {
 		t.Errorf("NotifyingBufferReader.Read() expected to read %d bytes, but read %d", len(data1)+len(data2), n)
 	}
 
-	if data := buf[:len(data1)]; !slices.Equal(data1, data) && !slices.Equal(data2, data) {
-		t.Errorf("NotifyingBufferReader.Read() got intermingled data %s", data)
+	if buf1, buf2 := buf[:len(data1)], buf[:len(data2)]; !slices.Equal(data1, buf1) && !slices.Equal(data2, buf2) {
+		t.Errorf("NotifyingBufferReader.Read() got intermingled data %s%s", buf1, buf2)
 	}
 
-	if data := buf[len(data1):]; !slices.Equal(data1, data) && !slices.Equal(data2, data) {
-		t.Errorf("NotifyingBufferReader.Read() got intermingled data %s", data)
+	if buf1, buf2 := buf[len(data2):], buf[len(data1):]; !slices.Equal(data1, buf1) && !slices.Equal(data2, buf2) {
+		t.Errorf("NotifyingBufferReader.Read() got intermingled data %s%s", buf1, buf2)
 	}
 }
 
