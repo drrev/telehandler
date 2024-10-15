@@ -96,7 +96,7 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 	}
 	context.AfterFunc(ctx, func() { r.Close() })
 
-	buf := make([]byte, 3*1024*1024)
+	buf := make([]byte, 10240)
 
 	// drain buffer
 	for ctx.Err() == nil {
