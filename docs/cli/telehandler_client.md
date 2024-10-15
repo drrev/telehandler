@@ -22,7 +22,9 @@ client is used to run subcommands over gRPC
 ### SEE ALSO
 
 * [telehandler](telehandler.md)	 - Telehandler is a simple service that is used to start, stop, query status, and watch the output of an arbitrary Linux process over gRPC.
+* [telehandler client benchmark](telehandler_client_benchmark.md)	 - A small command to benchmark e2e
 * [telehandler client run](telehandler_client_run.md)	 - Run a Linux command using a Telehandler server
+* [telehandler client status](telehandler_client_status.md)	 - Attempts to status the given job
 * [telehandler client stop](telehandler_client_stop.md)	 - Attempts to stop the given job
 * [telehandler client watch](telehandler_client_watch.md)	 - Watch the output of a job
 

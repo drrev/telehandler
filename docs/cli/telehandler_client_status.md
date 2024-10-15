@@ -1,16 +1,15 @@
-## telehandler client benchmark
+## telehandler client status
 
-A small command to benchmark e2e
+Attempts to status the given job
 
 ```
-telehandler client benchmark <command> [args...] [flags]
+telehandler client status <job_id> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help           help for benchmark
-      --watchers int   the number of watchers per run (default 100)
+  -h, --help   help for status
 ```
 
 ### Options inherited from parent commands
