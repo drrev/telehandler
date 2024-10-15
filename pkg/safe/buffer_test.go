@@ -7,12 +7,12 @@ import (
 	"slices"
 	"sync"
 	"testing"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 )
 
 func TestWriteAndNotify(t *testing.T) {
+	t.Parallel()
 	nb := NewNotifyingBuffer()
 	data := []byte("Hello, World!")
 	var wg sync.WaitGroup
@@ -38,6 +38,7 @@ func TestWriteAndNotify(t *testing.T) {
 }
 
 func TestCloseAndWait(t *testing.T) {
+	t.Parallel()
 	nb := NewNotifyingBuffer()
 	data := []byte("Hello, World!")
 	_, err := nb.Write(data)
@@ -57,6 +58,7 @@ func TestCloseAndWait(t *testing.T) {
 }
 
 func TestReader(t *testing.T) {
+	t.Parallel()
 	nb := NewNotifyingBuffer()
 	data := []byte("Hello, World!")
 	_, err := nb.Write(data)
@@ -114,43 +116,54 @@ func TestReader(t *testing.T) {
 }
 
 func TestConcurrentWriteAndRead(t *testing.T) {
+	t.Parallel()
 	nb := NewNotifyingBuffer()
 	data1 := []byte("Hello, ")
 	data2 := []byte("World!")
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		_, _ = nb.Write(data1)
-	}()
-	go func() {
-		defer wg.Done()
-		time.Sleep(time.Second)
-		_, _ = nb.Write(data2)
-	}()
-	wg.Wait()
-
 	r := nb.Reader()
 	buf := make([]byte, len(data1)+len(data2))
-	n, err := r.Read(buf)
-	if err != nil {
-		t.Errorf("NotifyingBufferReader.Read(): %v", err)
+	var n int
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer nb.Close()
+		_, err := nb.Write(data1)
+		if err != nil {
+			t.Error("Write1:", err)
+		}
+		_, err = nb.Write(data2)
+		if err != nil {
+			t.Error("Write2:", err)
+		}
+	}()
+
+	for n < len(buf) {
+		r, err := r.Read(buf)
+		n += r
+		if err != nil {
+			t.Errorf("NotifyingBufferReader.Read(): unexpected error %v", err)
+			break
+		}
 	}
+	wg.Wait()
+
 	if n != len(data1)+len(data2) {
 		t.Errorf("NotifyingBufferReader.Read() expected to read %d bytes, but read %d", len(data1)+len(data2), n)
 	}
 
-	if data := buf[:len(data1)]; !slices.Equal(data1, data) {
-		t.Errorf("NotifyingBufferReader.Read() expected %s, got %s", data1, data)
+	if data := buf[:len(data1)]; !slices.Equal(data1, data) && !slices.Equal(data2, data) {
+		t.Errorf("NotifyingBufferReader.Read() got intermingled data %s", data)
 	}
 
-	if data := buf[len(data1):]; !slices.Equal(data2, data) {
-		t.Errorf("NotifyingBufferReader.Read() expected %s, got %s", data1, data)
+	if data := buf[len(data1):]; !slices.Equal(data1, data) && !slices.Equal(data2, data) {
+		t.Errorf("NotifyingBufferReader.Read() got intermingled data %s", data)
 	}
 }
 
 func TestCloseWhileReading(t *testing.T) {
+	t.Parallel()
 	nb := NewNotifyingBuffer()
 	r := nb.Reader()
 	errCh := make(chan error)
@@ -172,6 +185,7 @@ func TestCloseWhileReading(t *testing.T) {
 }
 
 func TestMultipleReaders(t *testing.T) {
+	t.Parallel()
 	nb := NewNotifyingBuffer()
 	data := []byte("Hello, World!")
 
@@ -210,12 +224,7 @@ func BenchmarkNotifyingBuffer(b *testing.B) {
 		b.StopTimer()
 		data := rando()
 
-		nb := &NotifyingBuffer{
-			closed: false,
-			buff:   []byte{},
-			notify: make(chan struct{}),
-			mu:     sync.RWMutex{},
-		}
+		nb := NewNotifyingBuffer()
 
 		var eg errgroup.Group
 		for i := range 1000 {
