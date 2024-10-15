@@ -17,6 +17,13 @@ type execContext struct {
 	stopped atomic.Bool
 }
 
+// jobSafe is a thread-safe accessor for Job.
+func (e *execContext) jobSafe() (job Job) {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.Job
+}
+
 // Running is a convenience function to check
 // if the [Job] is [Running].
 func (e *execContext) Running() bool {
