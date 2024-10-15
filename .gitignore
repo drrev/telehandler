@@ -7,7 +7,7 @@
 *.dll
 *.so
 *.dylib
-data
+telehandler
 
 # Test binary, built with `go test -c`
 *.test
