@@ -97,6 +97,20 @@ Finally, jobs can be interrupted at any point using [`client stop`](docs/cli/tel
 user@host.internal>$ ./telehandler client stop $(cat job_id)
 ```
 
+#### Benchmark
+
+Refer to: [docs/cli/telehandler_client_benchmark.md](docs/cli/telehandler_client_benchmark.md)
+
+A rudimentary e2e benchmark is included under `./telehandler client benchmark <command> [args...]`. This will start a new job to run the given command and spread it across `100` watchers (customizable with `--watchers`).
+All output is saved to files named `out-*`. All data should be the same across all watchers and can be verified by hashing the files.
+
+The rate per seconds is printed for each watcher every second with a final average at the end.
+
+> Using this simple benchmark, I sent the ArchLinux ISO across 100 workers with a cumulative avg rate of 1GiB/s. All files hashed equal to the source.
+> 
+> The image was sent into STDOUT with `cat`:   
+> `./telehandler client benchmark cat data/archlinux-2024.10.01-x86_64.iso`
+
 ## Generating Certs
 
 Install [cfssl](https://github.com/cloudflare/cfssl) and add to `$PATH`. For example: `go install github.com/cloudflare/cfssl/cmd/...@latest`
