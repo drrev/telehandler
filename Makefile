@@ -31,3 +31,19 @@ build:
 clean:
 	rm -f ssl/*.{pem,csr}
 	rm -f telehandler
+
+.PHONY: run-server
+run-server: build
+	./telehandler server
+
+.PHONY: run-client
+run-client: build
+	./telehandler client run -- bash -c 'for i in {1..500}; do echo $$i; done'
+
+.PHONY: run-client-bubba
+run-client-bubba: build
+	./telehandler client run -c ssl/bubba.pem -k ssl/bubba-key.pem -- bash -c 'for i in {1..500}; do echo $$i; done'
+
+.PHONY: stop-job
+stop-job: build
+	./telehandler client stop `cat job_id`
