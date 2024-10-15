@@ -27,6 +27,10 @@ docs:
 build:
 	go build -v -o ./telehandler .
 
+.PHONY: test
+test:
+	go test -count 1 -v -race -failfast -cover ./...
+
 .PHONY: clean
 clean:
 	rm -f ssl/*.{pem,csr}
