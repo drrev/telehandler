@@ -126,7 +126,7 @@ func TestConcurrentWriteAndRead(t *testing.T) {
 	}()
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 		_, _ = nb.Write(data2)
 	}()
 	wg.Wait()
