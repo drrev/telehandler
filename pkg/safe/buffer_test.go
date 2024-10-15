@@ -7,7 +7,6 @@ import (
 	"slices"
 	"sync"
 	"testing"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -129,10 +128,15 @@ func TestConcurrentWriteAndRead(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(10 * time.Millisecond)
-		_, _ = nb.Write(data1)
-		_, _ = nb.Write(data2)
-		nb.Close()
+		defer nb.Close()
+		_, err := nb.Write(data1)
+		if err != nil {
+			t.Error("Write1:", err)
+		}
+		_, err = nb.Write(data2)
+		if err != nil {
+			t.Error("Write2:", err)
+		}
 	}()
 
 	for n < len(buf) {
