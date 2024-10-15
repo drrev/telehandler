@@ -17,6 +17,14 @@ type execContext struct {
 	stopped atomic.Bool
 }
 
+// Running is a convenience function to check
+// if the [Job] is [Running].
+func (e *execContext) Running() bool {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.Job.Running()
+}
+
 // buffer is a thread-safe method for getting the [safe.NotifyingBuffer].
 func (e *execContext) buffer() *safe.NotifyingBuffer {
 	e.m.Lock()
@@ -30,11 +38,12 @@ func (e *execContext) buffer() *safe.NotifyingBuffer {
 // An error is returned if the Job is not running.
 // If the job cannot be stopped, [ErrCannotStop] is returned.
 func (e *execContext) interrupt() error {
-	e.m.Lock()
-	defer e.m.Unlock()
 	if !e.Running() {
 		return invalidJobState(e.State)
 	}
+
+	e.m.Lock()
+	defer e.m.Unlock()
 
 	if e.stop == nil {
 		return ErrCannotStop
