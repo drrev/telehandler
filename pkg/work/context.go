@@ -1,7 +1,9 @@
 package work
 
 import (
+	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/drrev/telehandler/pkg/safe"
@@ -9,9 +11,10 @@ import (
 
 type execContext struct {
 	Job
-	m    sync.Mutex
-	buf  *safe.NotifyingBuffer
-	stop func()
+	m       sync.Mutex
+	buf     *safe.NotifyingBuffer
+	stop    func()
+	stopped atomic.Bool
 }
 
 // buffer is a thread-safe method for getting the [safe.NotifyingBuffer].
@@ -39,6 +42,7 @@ func (e *execContext) interrupt() error {
 
 	e.stop()
 	e.stop = nil
+	e.stopped.Store(true)
 	return nil
 }
 
@@ -54,12 +58,12 @@ func (e *execContext) exit(exitCode int) {
 
 	if exitCode == 0 {
 		e.State = Completed
-	} else if exitCode < 0 {
-		// interrupted can only happen if
-		// Telehandler interrupted the process
-		// as a result of a Stop() request
-		e.State = Stopped
 	} else {
 		e.State = Failed
 	}
+	if e.stopped.Load() {
+		e.State = Stopped
+	}
+
+	slog.Info("Job terminated", slog.Any("job", e.LogValue()))
 }

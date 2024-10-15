@@ -29,12 +29,13 @@ func startCmd(c *exec.Cmd, done func(exitCode int)) error {
 		}
 		close(errCh)
 
-		// Use out of range status in case we cannot
-		// determine the exit status.
-		//
-		// https://tldp.org/LDP/abs/html/exitcodes.html
-		code := 255
+		code := 0
 		if err := c.Wait(); err != nil {
+			// Use out of range status in case we cannot
+			// determine the exit status.
+			//
+			// https://tldp.org/LDP/abs/html/exitcodes.html
+			code = 255
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				code = exitErr.ExitCode()
 			}

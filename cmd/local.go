@@ -34,11 +34,11 @@ are executed in the local environment.
 		}
 
 		_, err = io.Copy(os.Stdout, r)
-		if !errors.Is(err, io.EOF) {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
 
-		return nil
+		return mgr.Wait(job.ID)
 	},
 }
 

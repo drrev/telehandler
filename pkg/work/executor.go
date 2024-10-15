@@ -1,6 +1,7 @@
 package work
 
 import (
+	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -83,6 +84,7 @@ func (m *Executor) Start(j Job) (Job, error) {
 
 	ec.StartTime = time.Now()
 	ec.State = Running
+	slog.Info("Job started", slog.Any("job", ec.LogValue()))
 
 	return ec.Job, nil
 }
@@ -133,25 +135,25 @@ func (m *Executor) OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 // Wait for a [Job] to terminate.
 func (m *Executor) Wait(id uuid.UUID) error {
 	m.mu.RLock()
-
 	ec, err := m.lookupContext(id)
 	if err != nil {
+		m.mu.RUnlock()
 		return err
 	}
 
 	if !ec.Running() {
+		m.mu.RUnlock()
 		return nil
 	}
-
-	buf := ec.buffer()
-
 	m.mu.RUnlock()
 
-	for _, closed := buf.Status(); !closed; _, closed = buf.Status() {
-		buf.Wait()
+	for {
+		ec.m.Lock()
+		if !ec.Running() {
+			return nil
+		}
+		ec.m.Unlock()
 	}
-
-	return nil
 }
 
 // lookupContext is a thread-safe method for finding execContext by Job ID.

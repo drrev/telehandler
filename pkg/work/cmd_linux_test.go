@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/drrev/telehandler/pkg/safe"
 )
@@ -35,10 +34,7 @@ func Test_makeCommand(t *testing.T) {
 	}
 
 	// make sure cancel works
-	go func() {
-		time.Sleep(250 * time.Millisecond)
-		cancel()
-	}()
+	cancel()
 
 	err := cmd.Wait()
 	if err == nil {
