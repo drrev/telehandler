@@ -172,9 +172,9 @@ func (r *NotifyingBufferReader) Read(p []byte) (n int, err error) {
 	}
 
 	r.nb.mu.RLock()
-	defer r.nb.mu.RUnlock()
-
 	n = copy(p, r.nb.buff[r.offs:])
+	r.nb.mu.RUnlock()
+
 	r.offs += n
 	return
 }
