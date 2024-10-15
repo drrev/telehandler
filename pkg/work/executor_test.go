@@ -14,6 +14,7 @@ import (
 )
 
 func TestExecutor_Start(t *testing.T) {
+	t.Parallel()
 	noopStart := func(v *int, err error) commandStarter {
 		return func(c *exec.Cmd, done func(exitCode int)) error {
 			return nil
@@ -109,6 +110,7 @@ func TestExecutor_Start(t *testing.T) {
 }
 
 func TestExecutor_Stop(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		id uuid.UUID
 	}
@@ -145,6 +147,7 @@ func TestExecutor_Stop(t *testing.T) {
 }
 
 func TestExecutor_Lookup(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		id uuid.UUID
 	}
@@ -184,6 +187,7 @@ func TestExecutor_Lookup(t *testing.T) {
 }
 
 func TestExecutor_OpenReader(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		id uuid.UUID
 	}
@@ -226,6 +230,7 @@ func TestExecutor_OpenReader(t *testing.T) {
 }
 
 func TestExecutor_Wait(t *testing.T) {
+	t.Parallel()
 	m := &Executor{
 		mu:       sync.RWMutex{},
 		cgroot:   "",

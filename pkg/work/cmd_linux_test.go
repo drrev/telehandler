@@ -12,6 +12,7 @@ import (
 )
 
 func Test_makeCommand(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	buf := safe.NewNotifyingBuffer()
