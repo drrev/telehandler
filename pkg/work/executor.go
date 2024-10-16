@@ -77,13 +77,13 @@ func (m *Executor) Start(j Job) (Job, error) {
 	cgroupJob := filepath.Join(m.cgroot, j.ID.String())
 	cmd, cancel := makeCommand(ec.buf, cgroupJob, j.Cmd, j.Args...)
 	ec.stop = cancel
+	ec.StartTime = time.Now()
+	ec.State = Running
 
 	if err := m.startCmd(cmd, ec.exit); err != nil {
 		return ec.jobSafe(), err
 	}
 
-	ec.StartTime = time.Now()
-	ec.State = Running
 	slog.Info("Job started", slog.Any("job", ec.LogValue()))
 
 	return ec.jobSafe(), nil
