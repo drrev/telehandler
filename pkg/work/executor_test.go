@@ -21,6 +21,17 @@ func TestExecutor_Start(t *testing.T) {
 	}
 	mockStart := func(v *int, err error) commandStarter {
 		return func(c *exec.Cmd, done func(exitCode int)) error {
+			if err == nil {
+				done(0)
+			} else {
+				done(1)
+			}
+			*v++
+			return err
+		}
+	}
+	mockStartNoDone := func(v *int, err error) commandStarter {
+		return func(c *exec.Cmd, done func(exitCode int)) error {
 			*v++
 			return err
 		}
@@ -58,11 +69,20 @@ func TestExecutor_Start(t *testing.T) {
 			startFn: noopStart,
 		},
 		{
-			name:      "start new job",
+			name:      "start new job immediate exit",
 			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
 			args:      args{j: Job{ID: uuid.Nil}},
 			wantErr:   utils.NoError(t),
 			startFn:   mockStart,
+			want:      Job{StartTime: time.Now(), State: Completed},
+			wantCalls: 1,
+		},
+		{
+			name:      "start new job",
+			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
+			args:      args{j: Job{ID: uuid.Nil}},
+			wantErr:   utils.NoError(t),
+			startFn:   mockStartNoDone,
 			want:      Job{StartTime: time.Now(), State: Running},
 			wantCalls: 1,
 		},
@@ -72,8 +92,9 @@ func TestExecutor_Start(t *testing.T) {
 			args:      args{j: Job{ID: uuid.Nil}},
 			wantErr:   utils.ErrorTextContains(t, "testing error"),
 			startFn:   mockStart,
-			wantCalls: 1,
 			injectErr: errors.New("testing error"),
+			want:      Job{StartTime: time.Now(), State: Failed, ExitCode: 1},
+			wantCalls: 1,
 		},
 	}
 	for _, tt := range tests {
@@ -95,8 +116,9 @@ func TestExecutor_Start(t *testing.T) {
 				t.Errorf("Executor.Start() invalid StartTime %v", got.StartTime)
 			}
 
-			// ignore start time for deep equals
+			// ignore times for deep equals
 			tt.want.StartTime = got.StartTime
+			tt.want.EndTime = got.EndTime
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Executor.Start() = %+v, want %+v", got, tt.want)
 			}
