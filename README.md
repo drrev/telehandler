@@ -1,4 +1,9 @@
 # telehandler
+
+> This codebase was developed for the [Level 5 Systems Challenge](https://github.com/gravitational/careers/blob/da6d4d1854f3814c6a9873c8ae17220008bdfebe/challenges/systems/challenge-1.md)
+> at Teleport in 2 weeks between 10/1/2024 &mdash; 10/15/2024. In case any further development occurs, the full non-changed codebase is available in the
+> [challenge-only](https://github.com/drrev/telehandler/tree/challenge-only) branch.
+
 A prototype job worker service that provides an API to run arbitrary Linux processes.
 
 See the [design documentation](docs/design.md) for more information.
