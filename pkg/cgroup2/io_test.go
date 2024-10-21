@@ -8,6 +8,7 @@ import (
 )
 
 func Test_ioConstraints(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		deviceIter iter.Seq2[string, error]
