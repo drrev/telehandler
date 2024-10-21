@@ -12,6 +12,7 @@ import (
 const adminUser = "admin"
 
 func validateAccess(cn string, req any) error {
+	// TODO: replace with OPA or OpenFGA or similar
 	mpr := req.(proto.Message).ProtoReflect()
 	parent := mpr.Descriptor().Fields().ByName("parent")
 	name := mpr.Descriptor().Fields().ByName("name")
