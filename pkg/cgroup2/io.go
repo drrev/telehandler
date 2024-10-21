@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	ioRBpsLimit  = 83886080
-	ioWBpsLimit  = 41943040
+	ioRBpsLimit  = 83_886_080 // 80MiB/s
+	ioWBpsLimit  = 41_943_040 // 40MiB/s
 	ioRiopsLimit = 1000
 	ioWiopsLimit = 1000
 
@@ -20,7 +20,7 @@ const (
 // ioConstraints uses the given deviceIter to create a Constraint slice, so that
 // each block device is limited constrained.
 func ioConstraints(deviceIter iter.Seq2[string, error]) ([]Constraint, error) {
-	var constraints []Constraint
+	constraints := []Constraint{}
 
 	if deviceIter == nil {
 		return nil, nil
