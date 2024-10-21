@@ -10,7 +10,6 @@ import (
 
 	"github.com/drrev/telehandler/pkg/safe"
 	"github.com/drrev/telehandler/tests/utils"
-	"github.com/google/uuid"
 )
 
 func TestExecutor_Start(t *testing.T) {
@@ -39,7 +38,7 @@ func TestExecutor_Start(t *testing.T) {
 	}
 
 	type fields struct {
-		contexts map[uuid.UUID]*execContext
+		contexts map[string]*execContext
 	}
 	type args struct {
 		j Job
@@ -56,23 +55,23 @@ func TestExecutor_Start(t *testing.T) {
 	}{
 		{
 			name:    "existing non-running job",
-			fields:  fields{contexts: map[uuid.UUID]*execContext{uuid.Nil: {}}},
-			args:    args{j: Job{ID: uuid.Nil}},
+			fields:  fields{contexts: map[string]*execContext{"": {}}},
+			args:    args{j: Job{Name: ""}},
 			wantErr: utils.ErrorTextContains(t, "invalid state"),
 			startFn: noopStart,
 		},
 		{
 			name:    "existing running job",
-			fields:  fields{contexts: map[uuid.UUID]*execContext{uuid.Nil: {Job: Job{State: Running}}}},
-			args:    args{j: Job{ID: uuid.Nil}},
+			fields:  fields{contexts: map[string]*execContext{"": {Job: Job{State: Running}}}},
+			args:    args{j: Job{Name: ""}},
 			want:    Job{State: Running},
 			wantErr: utils.NoError(t),
 			startFn: noopStart,
 		},
 		{
 			name:      "start new job immediate exit",
-			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
-			args:      args{j: Job{ID: uuid.Nil}},
+			fields:    fields{contexts: make(map[string]*execContext)},
+			args:      args{j: Job{Name: ""}},
 			wantErr:   utils.NoError(t),
 			startFn:   mockStart,
 			want:      Job{StartTime: time.Now(), State: Completed},
@@ -80,8 +79,8 @@ func TestExecutor_Start(t *testing.T) {
 		},
 		{
 			name:      "start new job",
-			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
-			args:      args{j: Job{ID: uuid.Nil}},
+			fields:    fields{contexts: make(map[string]*execContext)},
+			args:      args{j: Job{Name: ""}},
 			wantErr:   utils.NoError(t),
 			startFn:   mockStartNoDone,
 			want:      Job{StartTime: time.Now(), State: Running},
@@ -89,8 +88,8 @@ func TestExecutor_Start(t *testing.T) {
 		},
 		{
 			name:      "start new job with error",
-			fields:    fields{contexts: make(map[uuid.UUID]*execContext)},
-			args:      args{j: Job{ID: uuid.Nil}},
+			fields:    fields{contexts: make(map[string]*execContext)},
+			args:      args{j: Job{Name: ""}},
 			wantErr:   utils.ErrorTextContains(t, "testing error"),
 			startFn:   mockStart,
 			injectErr: errors.New("testing error"),
@@ -134,11 +133,11 @@ func TestExecutor_Start(t *testing.T) {
 func TestExecutor_Stop(t *testing.T) {
 	t.Parallel()
 	type args struct {
-		id uuid.UUID
+		id string
 	}
 	tests := []struct {
 		name     string
-		contexts map[uuid.UUID]*execContext
+		contexts map[string]*execContext
 		args     args
 		wantErr  func(error) bool
 	}{
@@ -150,7 +149,7 @@ func TestExecutor_Stop(t *testing.T) {
 		{
 			name:     "stop job",
 			args:     args{},
-			contexts: map[uuid.UUID]*execContext{uuid.Nil: {}},
+			contexts: map[string]*execContext{"": {}},
 			wantErr:  utils.ErrorTextContains(t, "invalid state"),
 		},
 	}
@@ -171,11 +170,11 @@ func TestExecutor_Stop(t *testing.T) {
 func TestExecutor_Lookup(t *testing.T) {
 	t.Parallel()
 	type args struct {
-		id uuid.UUID
+		id string
 	}
 	tests := []struct {
 		name     string
-		contexts map[uuid.UUID]*execContext
+		contexts map[string]*execContext
 		args     args
 		want     Job
 		wantErr  func(error) bool
@@ -186,7 +185,7 @@ func TestExecutor_Lookup(t *testing.T) {
 		},
 		{
 			name:     "found",
-			contexts: map[uuid.UUID]*execContext{uuid.Nil: {Job: Job{}}},
+			contexts: map[string]*execContext{"": {Job: Job{}}},
 			wantErr:  utils.NoError(t),
 		},
 	}
@@ -211,11 +210,11 @@ func TestExecutor_Lookup(t *testing.T) {
 func TestExecutor_OpenReader(t *testing.T) {
 	t.Parallel()
 	type args struct {
-		id uuid.UUID
+		id string
 	}
 	tests := []struct {
 		name     string
-		contexts map[uuid.UUID]*execContext
+		contexts map[string]*execContext
 		args     args
 		want     *safe.NotifyingBufferReader
 		wantErr  func(error) bool
@@ -227,7 +226,7 @@ func TestExecutor_OpenReader(t *testing.T) {
 		},
 		{
 			name:     "found",
-			contexts: map[uuid.UUID]*execContext{uuid.Nil: {Job: Job{}, buf: safe.NewNotifyingBuffer()}},
+			contexts: map[string]*execContext{"": {Job: Job{}, buf: safe.NewNotifyingBuffer()}},
 			wantErr:  utils.NoError(t),
 			want:     safe.NewNotifyingBuffer().Reader(),
 		},
@@ -256,30 +255,30 @@ func TestExecutor_Wait(t *testing.T) {
 	m := &Executor{
 		mu:       sync.RWMutex{},
 		cgroot:   "",
-		contexts: make(map[uuid.UUID]*execContext),
+		contexts: make(map[string]*execContext),
 	}
-	if err := m.Wait(uuid.Nil); !utils.ErrorTextContains(t, "no job found")(err) {
+	if err := m.Wait(""); !utils.ErrorTextContains(t, "no job found")(err) {
 		t.Errorf("Executor.Wait() error = %v", err)
 	}
 
-	m.contexts = map[uuid.UUID]*execContext{uuid.Nil: {}}
-	if err := m.Wait(uuid.Nil); err != nil {
+	m.contexts = map[string]*execContext{"": {}}
+	if err := m.Wait(""); err != nil {
 		t.Errorf("Executor.Wait() error = %v", err)
 	}
 
 	buf := safe.NewNotifyingBuffer()
-	buf.Write([]byte{0, 1})
+	_, _ = buf.Write([]byte{0, 1})
 
 	ec := &execContext{
 		Job: Job{State: Running},
 		buf: buf,
 	}
 
-	m.contexts = map[uuid.UUID]*execContext{uuid.Nil: ec}
+	m.contexts = map[string]*execContext{"": ec}
 
 	done := make(chan struct{})
 	go func() {
-		m.Wait(uuid.Nil)
+		_ = m.Wait("")
 		close(done)
 	}()
 

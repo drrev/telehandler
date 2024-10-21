@@ -2,22 +2,37 @@ package auth
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 const adminUser = "admin"
 
-type Resource interface {
-	Parent() string
-	Identity() uuid.UUID
-}
+func validateAccess(cn string, req any) error {
+	mpr := req.(proto.Message).ProtoReflect()
+	parent := mpr.Descriptor().Fields().ByName("parent")
+	name := mpr.Descriptor().Fields().ByName("name")
 
-// ValidateAccess that the given name has access to the given resource by checking
-// if the name is [adminUser] or if the parent matches the given name.
-func ValidateAccess(r Resource, name string) error {
-	if adminUser != name && r.Parent() != name {
-		return fmt.Errorf("user '%v' does not have permission to access resource '%v'", name, r.Identity())
+	switch {
+	case parent != nil && mpr.Has(parent):
+		val := mpr.Get(parent).String()
+		pfx := fmt.Sprintf("users/%s", cn)
+		if cn != adminUser && val != pfx {
+			return status.Errorf(codes.PermissionDenied, "resource '%s' is not accessible by user '%s'", val, cn)
+		}
+
+	case name != nil && mpr.Has(name):
+		val := mpr.Get(name).String()
+		pfx := fmt.Sprintf("users/%s/", cn)
+		if cn != adminUser && !strings.HasPrefix(val, pfx) {
+			return status.Errorf(codes.PermissionDenied, "resource '%s' is not accessible by user '%s'", val, cn)
+		}
+	default:
+		return status.Error(codes.PermissionDenied, "message has no 'parent' or 'name'")
 	}
+
 	return nil
 }

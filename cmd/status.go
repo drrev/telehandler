@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"log/slog"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -13,22 +11,12 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status <job_id>",
 	Short: "Attempts to status the given job",
-	Args: func(_ *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return fmt.Errorf("invalid args expected <job_id>")
-		}
-
-		if _, err := uuid.Parse(args[0]); err != nil {
-			return fmt.Errorf("invalid job id '%v'", args[0])
-		}
-
-		return nil
-	},
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		status, err := foremanClient.GetJobStatus(cmd.Context(), &foremanpb.GetJobStatusRequest{Id: args[0]})
+		status, err := foremanClient.GetJobStatus(cmd.Context(), &foremanpb.GetJobStatusRequest{Name: args[0]})
 
 		attrs := []slog.Attr{
-			slog.String("id", status.GetId()),
+			slog.String("name", status.GetName()),
 			slog.Any("state", status.GetState()),
 			slog.Time("start", status.GetStartTime().AsTime()),
 		}

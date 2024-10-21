@@ -38,6 +38,8 @@ var serverCmd = &cobra.Command{
 		server := grpc.NewServer(
 			grpc.Creds(tlsConfig),
 			grpc.InTapHandle(auth.Tap),
+			grpc.UnaryInterceptor(auth.UnaryServerInterceptor),
+			grpc.StreamInterceptor(auth.ServerStreamInterceptor),
 		)
 
 		foremanpb.RegisterForemanServiceServer(server, foreman.NewService(work.NewExecutor(cgroupRoot)))

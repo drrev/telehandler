@@ -13,7 +13,6 @@ import (
 )
 
 func TestTap(t *testing.T) {
-	t.Parallel()
 	noError := func(e error) bool { return e == nil }
 	errorTextContains := func(str string) func(e error) bool {
 		return func(e error) bool {

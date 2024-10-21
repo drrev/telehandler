@@ -10,7 +10,7 @@ import (
 // converting a [work.Job] into a [foremanpb.JobStatus].
 func JobToJobStatePb(job work.Job) *foremanpb.JobStatus {
 	return &foremanpb.JobStatus{
-		Id:        job.ID.String(),
+		Name:      job.Name,
 		State:     JobStateToPb(job.State),
 		StartTime: timestamppb.New(job.StartTime),
 		EndTime:   timestamppb.New(job.EndTime),

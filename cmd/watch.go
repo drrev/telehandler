@@ -3,13 +3,11 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
 
 	foremanpb "github.com/drrev/telehandler/gen/drrev/telehandler/foreman/v1alpha1"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -22,24 +20,14 @@ var watchCmd = &cobra.Command{
 	
 Jobs do not need to be running to watch output.
 If the job is not running, all historical output from process start to finish is retrieved.`,
-	Args: func(_ *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return fmt.Errorf("invalid args expected <job_id>")
-		}
-
-		if _, err := uuid.Parse(args[0]); err != nil {
-			return fmt.Errorf("invalid job id '%v'", args[0])
-		}
-
-		return nil
-	},
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return watchJobOutput(cmd.Context(), args[0])
 	},
 }
 
-func watchJobOutput(ctx context.Context, id string) error {
-	s, err := foremanClient.WatchJobOutput(ctx, &foremanpb.WatchJobOutputRequest{Id: id})
+func watchJobOutput(ctx context.Context, name string) error {
+	s, err := foremanClient.WatchJobOutput(ctx, &foremanpb.WatchJobOutputRequest{Name: name})
 	if err != nil {
 		log.Fatal(err)
 	}

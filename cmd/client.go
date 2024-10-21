@@ -16,6 +16,7 @@ var (
 	clientCertPath = "ssl/client.pem"
 	clientKeyPath  = "ssl/client-key.pem"
 	teleServer     = "localhost:6443"
+	userName       = ""
 )
 
 // clientCmd is a meta command to group all client commands together.
@@ -29,10 +30,11 @@ var clientCmd = &cobra.Command{
 
 	// Eagerly setup client, assume the command will work
 	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
-		tlsConfig, err := auth.LoadClientTLS(clientCertPath, clientKeyPath, caCertPath)
+		tlsConfig, cn, err := auth.LoadClientTLS(clientCertPath, clientKeyPath, caCertPath)
 		if err != nil {
 			return fmt.Errorf("failed to load TLS config: %w", err)
 		}
+		userName = cn
 
 		grpcConn, err = grpc.NewClient(teleServer, grpc.WithTransportCredentials(tlsConfig))
 		if err != nil {

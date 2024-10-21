@@ -39,20 +39,20 @@ func LoadServerTLS(certFile, keyFile, caFile string) (credentials.TransportCrede
 
 // LoadServerTLS is a helper to create mTLS transport credentials and a cert pool
 // using a self-signed cert chain for a gRPC client.
-func LoadClientTLS(certFile, keyFile, caFile string) (credentials.TransportCredentials, error) {
+func LoadClientTLS(certFile, keyFile, caFile string) (credentials.TransportCredentials, string, error) {
 	certificate, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load client certification: %w", err)
+		return nil, "", fmt.Errorf("failed to load client certification: %w", err)
 	}
 
 	ca, err := os.ReadFile(caFile)
 	if err != nil {
-		return nil, fmt.Errorf("faild to read CA certificate: %w", err)
+		return nil, "", fmt.Errorf("faild to read CA certificate: %w", err)
 	}
 
 	capool := x509.NewCertPool()
 	if !capool.AppendCertsFromPEM(ca) {
-		return nil, fmt.Errorf("faild to append the CA certificate to CA pool")
+		return nil, "", fmt.Errorf("faild to append the CA certificate to CA pool")
 	}
 
 	tlsConfig := &tls.Config{
@@ -60,5 +60,5 @@ func LoadClientTLS(certFile, keyFile, caFile string) (credentials.TransportCrede
 		RootCAs:      capool,
 	}
 
-	return credentials.NewTLS(tlsConfig), nil
+	return credentials.NewTLS(tlsConfig), certificate.Leaf.Subject.CommonName, nil
 }

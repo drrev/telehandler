@@ -28,7 +28,7 @@ are executed in the local environment.
 			return err
 		}
 
-		r, err := mgr.OpenReader(job.ID)
+		r, err := mgr.OpenReader(job.Name)
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ are executed in the local environment.
 			return err
 		}
 
-		return mgr.Wait(job.ID)
+		return mgr.Wait(job.Name)
 	},
 }
 

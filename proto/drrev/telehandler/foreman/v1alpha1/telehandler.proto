@@ -32,36 +32,57 @@ service ForemanService {
 
 // A request to start a new Linux process.
 message StartJobRequest {
+  // Required. The parent resource that owns the Job.
+  //
+  // Format: users/{user_id}
+  //
+  // Example: users/7307c303-b7c8-4b75-ad5b-25fecf8cb781
+  //
+  // See also: https://google.aip.dev/122
+  //
+  // TODO: Add/validate parent resource. Removed to simplify the design for prototyping.
+  //
+  string parent = 1;
+
   // Required. The Linux command to run on the target system.
-  string command = 1;
+  string command = 2;
 
   // Optional. Arguments to pass to the command.
-  repeated string args = 2;
+  repeated string args = 3;
 }
 
 // A request to stop a Job.
 message StopJobRequest {
-  // Required. The UUIDv4 of the job to stop.
+  // Required. The resource name of the job to stop.
   //
-  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
-  string id = 1;
+  // Format: users/{user_id}/jobs/{uid}
+  //
+  // Example: users/7307c303-b7c8-4b75-ad5b-25fecf8cb781/jobs/2259116c-578e-413c-93bd-d6855dfcb941
+  //
+  string name = 1;
 }
 
 // A request to resolve the latest status of the job,
 // including the current state and resource utilization.
 message GetJobStatusRequest {
-  // Required. The UUIDv4 of the job to stop.
+  // Required. The resource name of the job to stop.
   //
-  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
-  string id = 1;
+  // Format: users/{user_id}/jobs/{uid}
+  //
+  // Example: users/7307c303-b7c8-4b75-ad5b-25fecf8cb781/jobs/2259116c-578e-413c-93bd-d6855dfcb941
+  //
+  string name = 1;
 }
 
 // A request to watch streaming output from a target job.
 message WatchJobOutputRequest {
-  // Required. The UUIDv4 of the job to stop.
+  // Required. The resource name of the job to stop.
   //
-  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
-  string id = 1;
+  // Format: users/{user_id}/jobs/{uid}
+  //
+  // Example: users/7307c303-b7c8-4b75-ad5b-25fecf8cb781/jobs/2259116c-578e-413c-93bd-d6855dfcb941
+  //
+  string name = 1;
 }
 
 // A JobOutput reprents a single line of output from a given job.
@@ -90,20 +111,27 @@ enum JobState {
 
 // The full context of a Linux process execution.
 message JobResponse {
-  // Output only. A system-assigned UUIDv4 unique identifier for this Job.
+  // Output only. The resource name of this job.
+  // This name is required when performing any operations targeting this Job.
   //
-  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
-  string id = 1;
+  // Format: users/{user_id}/jobs/{uid}
+  //
+  string name = 1;
+  // Output only. A system-assigned UUIDv4 unique identifier for this Job.
+  string uid = 2;
   // Output only. The current state of the job.
-  JobState state = 2;
+  JobState state = 3;
 }
 
 // The current status of a given job.
 message JobStatus {
-  // Output only. A system-assigned UUIDv4 unique identifier for the Job.
+  // Output only. The resource name of the associated job.
   //
-  // Example: 2259116c-578e-413c-93bd-d6855dfcb941
-  string id = 1;
+  // Format: users/{user_id}/jobs/{uid}
+  //
+  // Example: users/7307c303-b7c8-4b75-ad5b-25fecf8cb781/jobs/2259116c-578e-413c-93bd-d6855dfcb941
+  //
+  string name = 1;
   // Output only. The current state of the job.
   JobState state = 2;
   // Output only. The job start time. This is the same as created time.

@@ -2,6 +2,7 @@ package work
 
 import (
 	"log/slog"
+	"path"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,7 +26,7 @@ const (
 
 // Job represents a command context.
 type Job struct {
-	ID uuid.UUID
+	Name string
 	// Owner that created this Job.
 	Owner string
 	// Cmd path to an executable to run for this Job.
@@ -47,7 +48,7 @@ type Job struct {
 // owner, cmd, and args.
 func NewJob(owner string, cmd string, args []string) *Job {
 	return &Job{
-		ID:    uuid.New(),
+		Name:  path.Join(owner, "/jobs/", uuid.New().String()),
 		Owner: owner,
 		Cmd:   cmd,
 		Args:  args,
@@ -55,13 +56,8 @@ func NewJob(owner string, cmd string, args []string) *Job {
 }
 
 // Identity returns the unique [Job] identifier.
-func (j *Job) Identity() uuid.UUID {
-	return j.ID
-}
-
-// Parent returns the owner of the [Job].
-func (j *Job) Parent() string {
-	return j.Owner
+func (j *Job) Identity() string {
+	return j.Name
 }
 
 // Running is a convenience function to check
@@ -74,7 +70,7 @@ func (j *Job) Running() bool {
 func (j Job) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("owner", j.Owner),
-		slog.String("id", j.ID.String()),
+		slog.String("name", j.Name),
 		slog.String("state", string(j.State)),
 		slog.String("cmd", j.Cmd),
 		slog.Any("args", j.Args),

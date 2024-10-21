@@ -3,8 +3,6 @@ package work
 import (
 	"errors"
 	"fmt"
-
-	"github.com/google/uuid"
 )
 
 var ErrCannotStop = errors.New("cannot stop process")
@@ -28,16 +26,16 @@ func (e *ErrInvalidJobState) Error() string {
 	return fmt.Sprintf("invalid state '%s'", e.state)
 }
 
-func jobNotFound(id uuid.UUID) *ErrJobNotFound {
-	return &ErrJobNotFound{id}
+func jobNotFound(name string) *ErrJobNotFound {
+	return &ErrJobNotFound{name}
 }
 
 // ErrJobNotFound is returned if no job is found for a given ID.
 type ErrJobNotFound struct {
-	id uuid.UUID
+	name string
 }
 
 // Error implements error.
 func (e *ErrJobNotFound) Error() string {
-	return fmt.Sprintf("no job found with id='%v'", e.id)
+	return fmt.Sprintf("no job found with name='%v'", e.name)
 }

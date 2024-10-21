@@ -44,7 +44,7 @@ var benchmarkCmd = &cobra.Command{
 				}
 				defer fp.Close()
 
-				tlsConfig, err := auth.LoadClientTLS(clientCertPath, clientKeyPath, caCertPath)
+				tlsConfig, _, err := auth.LoadClientTLS(clientCertPath, clientKeyPath, caCertPath)
 				if err != nil {
 					return fmt.Errorf("failed to load TLS config: %w", err)
 				}
@@ -57,7 +57,7 @@ var benchmarkCmd = &cobra.Command{
 
 				foremanClient := foremanpb.NewForemanServiceClient(grpcConn)
 
-				s, err := foremanClient.WatchJobOutput(cmd.Context(), &foremanpb.WatchJobOutputRequest{Id: resp.Id})
+				s, err := foremanClient.WatchJobOutput(cmd.Context(), &foremanpb.WatchJobOutputRequest{Name: resp.GetName()})
 				if err != nil {
 					return err
 				}
