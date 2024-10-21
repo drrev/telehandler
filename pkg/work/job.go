@@ -1,6 +1,7 @@
 package work
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -67,4 +68,15 @@ func (j *Job) Parent() string {
 // if the [Job] is [Running].
 func (j *Job) Running() bool {
 	return j.State == Running
+}
+
+// LogValue implements slog.LogValuer.
+func (j Job) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("owner", j.Owner),
+		slog.String("id", j.ID.String()),
+		slog.String("state", string(j.State)),
+		slog.String("cmd", j.Cmd),
+		slog.Any("args", j.Args),
+	)
 }

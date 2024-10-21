@@ -21,9 +21,8 @@ import (
 // Executor is the minimal interface needed to manage jobs for Start/Stop/WatchOuput.
 type Executor interface {
 	Start(j work.Job) (work.Job, error)
-	Find(id uuid.UUID) (work.Job, error)
-	Output(id uuid.UUID) (*safe.NotifyingBufferReader, error)
-	Running(jobID uuid.UUID) (v bool, ok bool)
+	Lookup(id uuid.UUID) (work.Job, error)
+	OpenReader(id uuid.UUID) (*safe.NotifyingBufferReader, error)
 	Stop(id uuid.UUID) error
 }
 
@@ -90,13 +89,13 @@ func (s *Service) WatchJobOutput(req *foremanpb.WatchJobOutputRequest, srv grpc.
 		return err
 	}
 
-	r, err := s.exe.Output(job.ID)
+	r, err := s.exe.OpenReader(job.ID)
 	if err != nil {
 		return status.Errorf(codes.Internal, "failed to open job output: %v", err)
 	}
 	context.AfterFunc(ctx, func() { r.Close() })
 
-	buf := make([]byte, 3*1024*1024)
+	buf := make([]byte, 10240)
 
 	// drain buffer
 	for ctx.Err() == nil {
@@ -144,7 +143,7 @@ func (s *Service) resolveJob(ctx context.Context, jobID string) (work.Job, error
 		return job, status.Errorf(codes.InvalidArgument, "invalid job id '%v'", jobID)
 	}
 
-	found, err := s.exe.Find(id)
+	found, err := s.exe.Lookup(id)
 	if err != nil {
 		return job, status.Errorf(codes.NotFound, "no job found for id '%v'", jobID)
 	}

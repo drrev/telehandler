@@ -95,7 +95,7 @@ type mockExec struct {
 	cb func(id uuid.UUID) (*work.Job, error)
 }
 
-func (m *mockExec) Find(id uuid.UUID) (job work.Job, err error) {
+func (m *mockExec) Lookup(id uuid.UUID) (job work.Job, err error) {
 	var j *work.Job
 
 	j, err = m.cb(id)

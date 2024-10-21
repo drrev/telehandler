@@ -90,8 +90,6 @@ func (b *NotifyingBuffer) Reader() *NotifyingBufferReader {
 
 // Write implements io.Writer.
 func (b *NotifyingBuffer) Write(p []byte) (n int, err error) {
-	defer b.broadcast()
-
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -100,56 +98,53 @@ func (b *NotifyingBuffer) Write(p []byte) (n int, err error) {
 	}
 
 	b.buff = append(b.buff, p...)
+	b.broadcast()
+
 	return len(p), nil
 }
 
 // Close implements io.Closer.
 func (b *NotifyingBuffer) Close() error {
 	b.mu.Lock()
+	defer b.mu.Unlock()
 
 	if b.closed {
-		b.mu.Unlock()
 		return nil
 	}
 
 	b.closed = true
-	b.mu.Unlock()
-
-	close(b.notify) // broadcast, but do not add a new notify chan
+	close(b.notify)
 
 	return nil
 }
 
 // broadcast to notify any listeners of a change within the buffer.
+// This method is NOT thread-safe.
 func (b *NotifyingBuffer) broadcast() {
-	b.mu.Lock()
-
 	if b.closed {
-		b.mu.Unlock()
 		return
 	}
 
-	notify := b.notify
+	close(b.notify)
 	b.notify = make(chan struct{})
-	b.mu.Unlock()
-
-	// broadcast while unlocked
-	close(notify)
 }
 
 // Wait returns a channel that is closed if the buffer changed.
-func (b *NotifyingBuffer) Wait() <-chan struct{} {
+func (b *NotifyingBuffer) Wait() (notify <-chan struct{}) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return b.notify
+	notify = b.notify
+	b.mu.RUnlock()
+	return
 }
 
 // Status returns the size of the current buffer and closed is true
 // if this buffer is closed and no more data will be written to it.
 func (b *NotifyingBuffer) Status() (size int, closed bool) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return len(b.buff), b.closed
+	size = len(b.buff)
+	closed = b.closed
+	b.mu.RUnlock()
+	return
 }
 
 // NotifyingBufferReader is a utility type for reading from [NotifyingBuffer].
@@ -177,9 +172,9 @@ func (r *NotifyingBufferReader) Read(p []byte) (n int, err error) {
 	}
 
 	r.nb.mu.RLock()
-	defer r.nb.mu.RUnlock()
-
 	n = copy(p, r.nb.buff[r.offs:])
+	r.nb.mu.RUnlock()
+
 	r.offs += n
 	return
 }
