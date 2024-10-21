@@ -13,6 +13,7 @@ import (
 )
 
 func TestService_resolveJob(t *testing.T) {
+	t.Parallel()
 	ctx := auth.CommonNameToCtx(context.Background(), "test-user")
 	job := work.NewJob("test-user", "", []string{})
 

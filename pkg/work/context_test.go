@@ -10,6 +10,7 @@ import (
 )
 
 func Test_execContext_interrupt(t *testing.T) {
+	t.Parallel()
 	called := func(v *int) func() {
 		*v = 0
 		return func() {
@@ -74,6 +75,7 @@ func Test_execContext_interrupt(t *testing.T) {
 }
 
 func Test_execContext_exit(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		job      Job
