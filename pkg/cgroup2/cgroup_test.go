@@ -8,6 +8,7 @@ import (
 )
 
 func Test_createGroup(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// fake controllers
@@ -32,6 +33,7 @@ func Test_createGroup(t *testing.T) {
 }
 
 func Test_validateCgroupv2(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	if err := validateCgroupv2(tmp); err == nil {
@@ -40,6 +42,7 @@ func Test_validateCgroupv2(t *testing.T) {
 }
 
 func Test_applyAllConstraints(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	fp, err := os.OpenFile(filepath.Join(tmp, ioConstraintFileName), os.O_CREATE, 0o644)

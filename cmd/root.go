@@ -11,10 +11,11 @@ var (
 	caCertPath = "ssl/root.pem"
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "telehandler",
-	Short: "Telehandler is a simple service that is used to start, stop, query status, and watch the output of an arbitrary Linux process over gRPC.",
+	Use:               "telehandler",
+	Short:             "Telehandler is a simple service that is used to start, stop, query status, and watch the output of an arbitrary Linux process over gRPC.",
+	DisableAutoGenTag: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
