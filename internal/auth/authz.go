@@ -13,6 +13,7 @@ const adminUser = "admin"
 
 func validateAccess(cn string, req any) error {
 	// TODO: replace with OPA or OpenFGA or similar
+	// TODO: get patterns from annotations instead of hardcoding
 	mpr := req.(proto.Message).ProtoReflect()
 	parent := mpr.Descriptor().Fields().ByName("parent")
 	name := mpr.Descriptor().Fields().ByName("name")
